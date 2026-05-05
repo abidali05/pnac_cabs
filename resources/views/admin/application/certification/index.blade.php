@@ -57,11 +57,32 @@
         color: white;
     }
 
+    .pnac-vertical-form {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .pnac-vertical-form #pnacVerticalForm {
+        width: 100%;
+    }
+
+    .pnac-vertical-form .pnac-step-card {
+        width: 100%;
+    }
+
+    @media (max-width: 767.98px) {
+        .pnac-vertical-form .pnac-step-card {
+            padding: 1rem !important;
+        }
+    }
+
 </style>
 @endsection
 <!-- Start app main Content -->
 <div class="main-content">
     <section class="section">
+        {{-- Legacy tab-based form disabled per new vertical flow request --}}
+        @if(false)
 
         <div class="mb-3 bg-success rounded-1 p-2">
             <button class="btn btn-success p-2 section-btn" id="General">Part 1 (General Info)</button>
@@ -1659,11 +1680,16 @@
 </div>
 
 @include('admin.application.certification.modal')
+        @endif
+
+@include('admin.application.certification.vertical_form')
 
 
 
 @endsection
 @section('script')
+@include('admin.application.certification.vertical_form_script')
+@if(false)
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/summernote@0.9.0/dist/summernote.min.js"></script>
 @include('admin.application.certification.modal_script');
@@ -2176,4 +2202,5 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 
+@endif
 @endsection
