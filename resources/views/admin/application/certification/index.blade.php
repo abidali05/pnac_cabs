@@ -33,7 +33,7 @@
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         border-radius: 1rem;
         overflow: hidden;
-    } 
+    }
 
     .iso-card:hover {
         transform: translateY(-10px);
@@ -125,7 +125,7 @@
                                 <input type="text" name="address"  required class="form-control">
                             </div>
                                               </div>
-                                                  
+
                                 <div class="form-group col-4">
                                     <label>Telephone</label>
                                     <input type="text" name="telephone"  required class="form-control">
@@ -145,13 +145,13 @@
                             </div>
 
 
-                            
+
                                                      </div>
                                                      <div class="col-md-4">       <div class="form-group">
                                 <label>City:</label>
                                 <input type="text" name="city"  required class="form-control">
                             </div></div>
-                                                         <div class="col-md-4">   
+                                                         <div class="col-md-4">
                             <div class="form-group">
                                 <label>Country:</label>
                                 <select name="country" class="form-select"  required>
@@ -167,14 +167,14 @@
                                     <input type="text" name="postal_code"  required class="form-control">
                                 </div></div>
                             </div>
-                   
-                     
-                    
-                      
-                        
 
-                   
-                  
+
+
+
+
+
+
+
                             <div class="footer d-flex justify-content-end">
                                 {{-- <button class="btn btn-success" type="submit">Submit</button> --}}
                                 {{-- <button class="btn btn-secondary prev-btn" type="button">Previous</button> --}}
