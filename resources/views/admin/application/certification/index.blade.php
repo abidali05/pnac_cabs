@@ -2011,7 +2011,17 @@
 @include('admin.application.certification.modal')
 @endif
 
-@include('admin.application.certification.vertical_form')
+@php
+    $schemeName = urldecode(request()->query('scheme_name'));
+@endphp
+
+@if($schemeName === 'Certification Bodies')
+    @include('admin.application.certification.forms.certification_bodies_form')
+@elseif(in_array($schemeName, ['Testing', 'Calibration', 'Testing Calibration Laboratories']))
+    @include('admin.application.certification.forms.laboratory_form')
+@else
+    @include('admin.application.certification.forms.default_form')
+@endif
 
 
 
