@@ -1,0 +1,161 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('medical_laboratories', function (Blueprint $table) {
+            $table->id();
+            $table->text('organisation')->nullable();
+            $table->text('address_medical')->nullable();
+            $table->text('postcode')->nullable();
+            $table->text('tel')->nullable();
+            $table->text('fax')->nullable();
+            $table->text('contact_name')->nullable();
+            $table->text('designation')->nullable();
+            $table->text('person_address')->nullable();
+            $table->text('person_postcode')->nullable();
+            $table->text('person_tel')->nullable();
+            $table->text('person_fax')->nullable();
+            $table->text('person_mobile')->nullable();
+            $table->text('clinical_chemistry')->nullable();
+            $table->text('haematology')->nullable();
+            $table->text('histopathology')->nullable();
+            $table->text('immunology')->nullable();
+            $table->text('microbiology')->nullable();
+            $table->text('molecular_biology')->nullable();
+            $table->text('other_describe')->nullable();
+            $table->text('chack_quality')->nullable();
+            $table->text('chack_procedures')->nullable();
+            $table->text('chack_recognised')->nullable();
+            $table->text('chack_plan')->nullable();
+            $table->text('chack_agreement')->nullable();
+            $table->text('chack_filled')->nullable();
+            $table->text('chack_applicant')->nullable();
+            $table->text('selves_title')->nullable();
+            $table->text('selves_name')->nullable();
+            $table->text('selves_position')->nullable();
+            $table->text('selves_parent_organization')->nullable();
+            $table->text('selves_parent_address')->nullable();
+            $table->text('selves_parent_postcode')->nullable();
+            $table->text('selves_parent_tel')->nullable();
+            $table->text('selves_parent_fax')->nullable();
+            $table->text('selves_invoicing_organization')->nullable();
+            $table->text('selves_invoicing_address')->nullable();
+            $table->text('selves_invoicing_postcode')->nullable();
+            $table->text('selves_invoicing_tel')->nullable();
+            $table->text('selves_invoicing_fax')->nullable();
+            $table->text('selves_individual')->nullable();
+            $table->text('selves_public')->nullable();
+            $table->text('selves_private')->nullable();
+            $table->text('selves_academic')->nullable();
+            $table->text('selves_hospital')->nullable();
+            $table->text('selves_other_describe')->nullable();
+            $table->text('selves_activities')->nullable();
+            $table->text('selves_permanent_facility')->nullable();
+            $table->text('selves_sample_collection')->nullable();
+            $table->text('selves_temporary_facility')->nullable();
+            $table->text('selves_mobile_laboratory')->nullable();
+            $table->text('staff_laboratory')->nullable();
+            $table->text('staff_name')->nullable();
+            $table->text('staff_qualification')->nullable();
+            $table->text('staff_experience')->nullable();
+            $table->text('staff_relevant')->nullable();
+            $table->text('staff_authorised')->nullable();
+            $table->text('staff_specimen')->nullable();
+            $table->text('staff_quality_name')->nullable();
+            $table->text('staff_quality_qualifications')->nullable();
+            $table->text('staff_quality_experience')->nullable();
+            $table->text('staff_quality_training')->nullable();
+            $table->text('staff_quality_specimen')->nullable();
+            $table->text('staff_name_section')->nullable();
+            $table->text('staff_section_name')->nullable();
+            $table->text('staff_section_qualification')->nullable();
+            $table->text('staff_section_experience')->nullable();
+            $table->text('staff_section_relevant')->nullable();
+            $table->text('staff_section_authorised')->nullable();
+            $table->text('scop_sample_type')->nullable();
+            $table->text('scop_types')->nullable();
+            $table->text('scop_range')->nullable();
+            $table->text('scop_detection')->nullable();
+            $table->text('scop_uncertainty')->nullable();
+            $table->text('scop_standard')->nullable();
+            $table->text('scop_quality')->nullable();
+            $table->text('scop_major_name')->nullable();
+            $table->text('scop_major_model')->nullable();
+            $table->text('scop_major_working')->nullable();
+            $table->text('scop_major_minimum')->nullable();
+            $table->text('scop_major_lastdate')->nullable();
+            $table->text('scop_major_duedate')->nullable();
+            $table->text('scop_major_test')->nullable();
+            $table->text('scop_reference_name')->nullable();
+            $table->text('scop_reference_source')->nullable();
+            $table->text('scop_reference_date_ex')->nullable();
+            $table->text('scop_reference_traceability')->nullable();
+            $table->text('scop_reference_purpose')->nullable();
+            $table->text('scop_proficiency_product')->nullable();
+            $table->text('scop_proficiency_details')->nullable();
+            $table->text('scop_proficiency_date')->nullable();
+            $table->text('scop_proficiency_organizing')->nullable();
+            $table->text('scop_proficiency_performance')->nullable();
+            $table->text('scop_proficiency_corrective')->nullable();
+            $table->text('quality_fully')->nullable();
+            $table->text('quality_fully_comment')->nullable();
+            $table->text('quality_record')->nullable();
+            $table->text('quality_record_comment')->nullable();
+            $table->text('quality_adequate')->nullable();
+            $table->text('quality_adequate_comment')->nullable();
+            $table->text('quality_procedures')->nullable();
+            $table->text('quality_procedures_comment')->nullable();
+            $table->text('quality_internal')->nullable();
+            $table->text('quality_internal_comment')->nullable();
+            $table->text('quality_pnac')->nullable();
+            $table->text('quality_pnac_comment')->nullable();
+            $table->text('quality_other')->nullable();
+            $table->text('quality_other_comment')->nullable();
+            $table->text('quality_perform')->nullable();
+            $table->text('quality_perform_comment')->nullable();
+            $table->text('quality_identified_comment')->nullable();
+            $table->text('quality_incorporate_comment')->nullable();
+            $table->text('quality_compliance_consider')->nullable();
+            $table->text('quality_compliance_specific')->nullable();
+            $table->text('quality_compliance_area')->nullable();
+            $table->text('quality_rectified')->nullable();
+            $table->text('approvals_name')->nullable();
+            $table->text('approvals_scope')->nullable();
+            $table->text('approvals_start_date')->nullable();
+            $table->text('approvals_end_date')->nullable();
+            $table->text('declaration_clinical')->nullable();
+            $table->text('declaration_haematology')->nullable();
+            $table->text('declaration_histopathology')->nullable();
+            $table->text('declaration_immunology')->nullable();
+            $table->text('declaration_microbiology')->nullable();
+            $table->text('declaration_moleculary')->nullable();
+            $table->text('declaration_other')->nullable();
+            $table->text('signed')->nullable();
+            $table->date('date')->nullable();
+
+            $table->text('category')->nullable();
+
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('medical_laboratories');
+    }
+};
