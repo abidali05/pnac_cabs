@@ -8,7 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ApplicationAboutScope;
 use App\Models\ApplicationAboutSelves;
 use App\Models\ApplicationAboutStaff;
-use App\Models\ApplicationApproval; 
+use App\Models\ApplicationApproval;
 use App\Models\ApplicationCalibrationFacility;
 use App\Models\ApplicationDeclaration;
 use App\Models\ApplicationForLab;
@@ -221,7 +221,6 @@ class ApplicationController extends Controller
 
     public function applicationCreate(Request $request)
     {
-        //  dd($request->all());
         $employees = [];
         $declaration = [];
         $documentDetails = [];
@@ -233,7 +232,6 @@ class ApplicationController extends Controller
         $categories = Category22000::all();
         $subCategories = SubCategory22000::all();
         $countries = DB::table('countries')->pluck('en_short_name');
-        // dd($clusters);
 
         $scheme_name = $request->scheme_name;
         $application = $request->application;
@@ -245,34 +243,229 @@ class ApplicationController extends Controller
         if($applicationId){
             $documentDetails = DocumentDetail::where('user_id', auth()->user()->id)->where('certification_general_id',$applicationId)->where('category', $scheme_name)->get();
             $employees = CertificationEmployee::where('category', $scheme_name)->where('certification_general_id',$applicationId)->get();
-
-            $declaration = CertificationDeclaration::where('certification_general_id', $general->id)->where('category', $scheme_name)->where('certification_general_id',$applicationId)->first();
+            $declaration = CertificationDeclaration::where('certification_general_id', $applicationId)->where('category', $scheme_name)->first();
         }
-        
-//  dd($applicationId);
-        // dd($applicationId);
 
-		// dd(session('application_id'));
         $scopes = ScopeFactory::getScopes($scheme_name, $applicationId)->where('user_id',Auth::id())->where('certification_general_id',$applicationId);
-        
-        // dd($scopes);
+
         $referenceNumber = 'CAB-' . now()->format('Ymd') . rand(1000, 9999); // Example: CAB-20250806-4572
 
-        // dd($referenceNumber);
+        $labApplication = ApplicationForLab::updateOrCreate(
+            [
+                'user_id' => auth()->id(),
+                'category' => $scheme_name,
+            ],
+            []
+        );
 
-        return view('admin.application.certification.index', compact('scopes','scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries'));
+        $savedSections = [
+            'basic_info' => !empty($labApplication->organisation) || !empty($labApplication->person_email),
+            'about_yourself' => !empty($labApplication->selves_name) || !empty($labApplication->selves_parent_organization),
+            'about_staff' => !empty($labApplication->staff_name) || !empty($labApplication->staff_quality_name),
+            'calibration_scope' => !empty($labApplication->scop_calib_measurement) || !empty($labApplication->scop_calib_technique),
+            'testing_scope' => !empty($labApplication->scop_materials) || !empty($labApplication->scop_description),
+            'calibration_facility' => !empty($labApplication->calibration_fully) || !empty($labApplication->calibration_compliance),
+            'other_approvals' => !empty($labApplication->approvals_name) || !empty($labApplication->approvals_scope),
+            'declaration' => !empty($labApplication->signed) || !empty($labApplication->date),
+        ];
+
+        return view('admin.application.certification.index', compact('labApplication', 'savedSections', 'scopes','scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries'));
+    }
+
+    public function saveBasicInfo(Request $request, ApplicationForLab $applicationForLab)
+    {
+        $validator = Validator::make($request->all(), [
+            'organisation' => 'required|string|max:255',
+            'cab_name' => 'required|string|max:255',
+            'address_laboratory' => 'required|string|max:1000',
+            'tel' => ['required', 'string', 'min:7', 'max:30', 'regex:/^[0-9+\-\s]+$/'],
+            'person_email' => 'required|email|max:255',
+            'ntn_ftn' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9\-\/]+$/'],
+            'website' => 'required|url|max:255',
+            'city' => 'required|string|max:255',
+            'country' => 'required|string|max:255',
+            'postcode' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9\s\-]+$/'],
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()->with('open_section', 'basic_info');
+        }
+
+        $applicationForLab->update(array_merge(
+            $validator->validated(),
+            ['user_id' => auth()->id(), 'category' => urldecode($request->query('scheme_name', $applicationForLab->category))]
+        ));
+
+        return redirect()->route('application.create', [
+            'scheme_name' => $request->query('scheme_name'),
+            'application' => $request->query('application'),
+            'edit_section' => null,
+        ])->with('success', 'Basic information saved successfully.')->with('open_section', 'basic_info');
+    }
+
+    public function saveAboutYourself(Request $request, ApplicationForLab $applicationForLab)
+    {
+        $validator = Validator::make($request->all(), [
+            'selves_title' => 'required|string|max:100',
+            'selves_name' => 'required|string|max:255',
+            'selves_position' => 'required|string|max:255',
+            'selves_parent_organization' => 'required|string|max:255',
+            'selves_relationship' => 'required|string|max:255',
+            'selves_address' => 'required|string',
+            'selves_postcode' => 'required|string|max:100',
+            'selves_tel' => ['required', 'string', 'max:100', 'regex:/^[0-9+\-\s]+$/'],
+            'selves_fax' => ['required', 'string', 'max:100', 'regex:/^[0-9+\-\s]+$/'],
+            'ownership_type' => 'required|string|max:255',
+            'selves_other_describe' => 'required|string',
+            'parent_main_activity' => 'required|string|max:20',
+            'selves_activities' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()->with('open_section', 'about_yourself');
+        }
+
+        $data = $validator->validated();
+        $data['selves_parent'] = $data['selves_parent_organization'] ?? null;
+        $data['selves_with_parent'] = $data['parent_main_activity'] ?? null;
+        $data['selves_own_organisation'] = in_array('Own organisation', $request->input('selves_undertakes', []), true) ? '1' : null;
+        $data['selves_other_organisation'] = in_array('Other organisations', $request->input('selves_undertakes', []), true) ? '1' : null;
+        $data['selves_individual'] = $request->input('ownership_type') === 'Owned by an individual' ? '1' : null;
+        $data['selves_public'] = $request->input('ownership_type') === 'Owned by public limited company' ? '1' : null;
+        $data['selves_private'] = $request->input('ownership_type') === 'Owned by a private company / partnership' ? '1' : null;
+        $data['selves_learned'] = $request->input('ownership_type') === 'Part of learned / technical institution' ? '1' : null;
+        $data['selves_industry'] = $request->input('ownership_type') === 'Owned by a public body / nationalised industry' ? '1' : null;
+        $data['selves_academic'] = $request->input('ownership_type') === 'Part of an academic institution' ? '1' : null;
+        unset($data['ownership_type'], $data['parent_main_activity'], $data['selves_undertakes']);
+
+        $applicationForLab->update($data);
+
+        return redirect()->route('application.create', [
+            'scheme_name' => $request->query('scheme_name'),
+            'application' => $request->query('application'),
+        ])->with('success', 'About yourselves saved successfully.')->with('open_section', 'about_yourself');
+    }
+
+    public function saveAboutStaff(Request $request, ApplicationForLab $applicationForLab)
+    {
+        $validator = Validator::make($request->all(), [
+            'staff_name' => 'required|string',
+            'staff_qualifications' => 'required|string',
+            'staff_experience' => 'required|string',
+            'staff_quality_name' => 'required|string|max:255',
+            'staff_quality_qualifications' => 'required|string|max:255',
+            'staff_quality_experience' => 'required|string|max:255',
+        ]);
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()->with('open_section', 'about_staff');
+        }
+        $applicationForLab->update($validator->validated());
+        return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'About staff saved successfully.')->with('open_section', 'about_staff');
+    }
+
+    public function saveCalibrationScope(Request $request, ApplicationForLab $applicationForLab)
+    {
+        $validator = Validator::make($request->all(), [
+            'scop_calib_measurement' => 'required|string',
+            'scop_calib_range' => 'required|string',
+            'scop_calib_expanded' => 'required|string',
+            'scop_calib_technique' => 'required|string',
+        ]);
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()->with('open_section', 'calibration_scope');
+        }
+        $applicationForLab->update($validator->validated());
+        return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Calibration scope saved successfully.')->with('open_section', 'calibration_scope');
+    }
+
+    public function saveTestingScope(Request $request, ApplicationForLab $applicationForLab)
+    {
+        $validator = Validator::make($request->all(), [
+            'scop_materials' => 'required|string',
+            'scop_types' => 'required|string',
+            'scop_range' => 'required|string',
+            'scop_detection' => 'required|string',
+            'scop_uncertainty' => 'required|string',
+            'scop_standard' => 'required|string',
+            'scop_description' => 'required|string',
+            'scop_working' => 'required|string',
+            'scop_limit' => 'required|string',
+        ]);
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()->with('open_section', 'testing_scope');
+        }
+        $applicationForLab->update($validator->validated());
+        return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Testing scope saved successfully.')->with('open_section', 'testing_scope');
+    }
+
+    public function saveCalibrationFacility(Request $request, ApplicationForLab $applicationForLab)
+    {
+        $validator = Validator::make($request->all(), [
+            'calibration_fully' => 'required|string',
+            'calibration_fully_comment' => 'required|string',
+            'calibration_record' => 'required|string',
+            'calibration_record_comment' => 'required|string',
+            'calibration_adequate' => 'required|string',
+            'calibration_adequate_comment' => 'required|string',
+            'calibration_procedures' => 'required|string',
+            'calibration_procedures_comment' => 'required|string',
+            'calibration_internal' => 'required|string',
+            'calibration_internal_comment' => 'required|string',
+            'calibration_pnac' => 'required|string',
+            'calibration_pnac_comment' => 'required|string',
+            'calibration_other_comment' => 'required|string',
+            'calibration_lab_comment' => 'required|string',
+            'calibration_compliance' => 'required|string',
+            'calibration_rectified' => 'required|date',
+        ]);
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()->with('open_section', 'calibration_facility');
+        }
+        $applicationForLab->update($validator->validated());
+        return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Calibration facility saved successfully.')->with('open_section', 'calibration_facility');
+    }
+
+    public function saveOtherApprovals(Request $request, ApplicationForLab $applicationForLab)
+    {
+        $validator = Validator::make($request->all(), [
+            'approvals_name' => 'required|string|max:255',
+            'approvals_scope' => 'required|string|max:255',
+            'approvals_start_date' => 'required|date',
+            'approvals_end_date' => 'required|date',
+        ]);
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()->with('open_section', 'other_approvals');
+        }
+        $applicationForLab->update($validator->validated());
+        return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Other approvals saved successfully.')->with('open_section', 'other_approvals');
+    }
+
+    public function saveDeclaration(Request $request, ApplicationForLab $applicationForLab)
+    {
+        $validator = Validator::make($request->all(), [
+            'declaration_calibration' => 'required|string|max:100',
+            'declaration_testing' => 'required|string|max:100',
+            'declaration_extension' => 'required|string|max:255',
+            'declaration_laboratory' => 'required|string|max:255',
+            'declaration_test_lab' => 'required|string|max:255',
+            'signed' => 'required|string|max:255',
+            'date' => 'required|date',
+        ]);
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()->with('open_section', 'declaration');
+        }
+        $applicationForLab->update($validator->validated());
+        return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Declaration saved successfully.')->with('open_section', 'declaration');
     }
 
 
 
     public function viewScope(Request $request)
     {
-        dd('there');
         $scope = $request->get('scope');
         $category = $request->get('category');
         $general = CertificationGeneral::where('user_id', auth()->user()->id)->where('category', $category)->where('application', $request->application)->first();
         $general_id = @$general->id;
-        // dd($general_id);
         $scopes = ScopeFactory::getScopes($category, $general_id, $scope);
 
 
@@ -299,8 +492,8 @@ class ApplicationController extends Controller
 
 
     public function storeCertification(Request $request)
-    {   
-        
+    {
+
         //  dd($request->all());
 
         if($request->application == 'Renewal Application'){
@@ -318,7 +511,7 @@ class ApplicationController extends Controller
             $generalData['user_id'] = auth()->user()->id;
             $saved=CertificationGeneral::create($generalData);
             // $generalData = CertificationGeneral::where('id', $request->general_id)->updateOrCreate($generalData);
-            
+
             session(['application_id' => $saved->id]);
             // dd(session()->all());
             return redirect()->back()->with('show_section', 'Employee');
