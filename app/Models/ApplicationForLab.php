@@ -48,8 +48,7 @@ class ApplicationForLab extends Model
         'scop_calib_range',
         'scop_calib_expanded',
         'scop_calib_technique',
-
-
+        'scop_calib_field',
 
         // Scope Of Application
         // 'application_general_id',
@@ -87,6 +86,8 @@ class ApplicationForLab extends Model
         'calibration_lab_comment',
         'calibration_consider',
         'calibration_compliance',
+        'calibration_compliance_comment',
+        'calibration_non_compliance',
         'calibration_rectified',
 
         // Declaration
@@ -95,6 +96,7 @@ class ApplicationForLab extends Model
         'declaration_extension',
         'declaration_laboratory',
         'declaration_test_lab',
+        'application_fee',
         'signed',
         'date',
         'category',
