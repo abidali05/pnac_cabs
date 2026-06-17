@@ -5,14 +5,7 @@ namespace App\Http\Controllers\admin;
 use App\Factories\ScopeFactory;
 use App\Factories\ScopeFetcher;
 use App\Http\Controllers\Controller;
-use App\Models\ApplicationAboutScope;
-use App\Models\ApplicationAboutSelves;
-use App\Models\ApplicationAboutStaff;
-use App\Models\ApplicationApproval;
-use App\Models\ApplicationCalibrationFacility;
-use App\Models\ApplicationDeclaration;
 use App\Models\ApplicationForLab;
-use App\Models\ApplicationGeneral;
 use App\Models\CalibrationScope;
 use App\Models\Category22000;
 use App\Models\CertificationBody;
@@ -52,7 +45,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 
 class ApplicationController extends Controller
 {
@@ -233,7 +225,6 @@ class ApplicationController extends Controller
         return view('admin.application.index', compact('mergedApplications', 'schemes'));
     }
 
-
     public function applicationCreate(Request $request)
     {
         $employees = [];
@@ -304,15 +295,15 @@ class ApplicationController extends Controller
         $isSubmitted = optional(@$general->declaration)->status === 'submited';
         $applicationId = session('application_id');
 
-        if($applicationId){
-            $documentDetails = DocumentDetail::where('user_id', auth()->user()->id)->where('certification_general_id',$applicationId)->where('category', $scheme_name)->get();
-            $employees = CertificationEmployee::where('category', $scheme_name)->where('certification_general_id',$applicationId)->get();
+        if ($applicationId) {
+            $documentDetails = DocumentDetail::where('user_id', auth()->user()->id)->where('certification_general_id', $applicationId)->where('category', $scheme_name)->get();
+            $employees = CertificationEmployee::where('category', $scheme_name)->where('certification_general_id', $applicationId)->get();
             $declaration = CertificationDeclaration::where('certification_general_id', $applicationId)->where('category', $scheme_name)->first();
         }
 
-        $scopes = ScopeFactory::getScopes($scheme_name, $applicationId)->where('user_id',Auth::id())->where('certification_general_id',$applicationId);
+        $scopes = ScopeFactory::getScopes($scheme_name, $applicationId)->where('user_id', Auth::id())->where('certification_general_id', $applicationId);
 
-        $referenceNumber = 'CAB-' . now()->format('Ymd') . rand(1000, 9999); // Example: CAB-20250806-4572
+        $referenceNumber = 'CAB-'.now()->format('Ymd').rand(1000, 9999); // Example: CAB-20250806-4572
 
         $labApplication = ApplicationForLab::updateOrCreate(
             [
@@ -328,14 +319,14 @@ class ApplicationController extends Controller
             'basic_info' => !empty($general?->cab_name) || !empty($general?->email),
             'about_yourself' => !empty($labApplication->selves_name) || !empty($labApplication->selves_parent_organization),
             'about_staff' => !empty($labApplication->staff_name) || !empty($labApplication->staff_quality_name),
-            'calibration_scope' => !empty($labApplication->scop_calib_measurement) || !empty($labApplication->scop_calib_technique),
+            'calibration_scope' => !empty($labApplication->scop_calib_field) && $labApplication->scop_calib_field !== '[]',
             'testing_scope' => !empty($labApplication->scop_materials) || !empty($labApplication->scop_description),
             'calibration_facility' => !empty($labApplication->calibration_fully) || !empty($labApplication->calibration_compliance),
             'other_approvals' => !empty($labApplication->approvals_name) || !empty($labApplication->approvals_scope),
             'declaration' => !empty($labApplication->signed) || !empty($labApplication->date),
         ];
 
-        return view('admin.application.certification.index', compact('labApplication', 'savedSections', 'scopes','scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries', 'cbApplication', 'cbStaff', 'cbApprovals', 'cbScopes', 'cbSavedSections'));
+        return view('admin.application.certification.index', compact('labApplication', 'savedSections', 'scopes', 'scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries', 'cbApplication', 'cbStaff', 'cbApprovals', 'cbScopes', 'cbSavedSections'));
     }
 
     public function saveCertificationBodiesBasicInfo(Request $request)
@@ -509,22 +500,40 @@ class ApplicationController extends Controller
             return back()->withErrors($validator)->withInput()->with('open_section', 'about_staff');
         }
         $applicationForLab->update($validator->validated());
+
         return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'About staff saved successfully.')->with('open_section', 'about_staff');
     }
 
     public function saveCalibrationScope(Request $request, ApplicationForLab $applicationForLab)
     {
         $validator = Validator::make($request->all(), [
-            'scop_calib_measurement' => 'required|string',
-            'scop_calib_range' => 'required|string',
-            'scop_calib_expanded' => 'required|string',
-            'scop_calib_technique' => 'required|string',
+            'calibration' => 'required|array',
+            'calibration.*.field' => 'nullable|string',
+            'calibration.*.measurement' => 'nullable|string',
+            'calibration.*.range' => 'nullable|string',
+            'calibration.*.expanded' => 'nullable|string',
+            'calibration.*.technique' => 'nullable|string',
         ]);
+
         if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput()->with('open_section', 'calibration_scope');
+            return back()
+                ->withErrors($validator)
+                ->withInput()
+                ->with('open_section', 'calibration_scope');
         }
-        $applicationForLab->update($validator->validated());
-        return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Calibration scope saved successfully.')->with('open_section', 'calibration_scope');
+
+        $data = $validator->validated();
+
+        $applicationForLab->update([
+            'scop_calib_field' => json_encode(array_values($data['calibration'])),
+        ]);
+
+        return redirect()->route('application.create', [
+            'scheme_name' => $request->query('scheme_name'),
+            'application' => $request->query('application'),
+        ])->with('success', 'Calibration scope saved successfully.')
+            ->with('open_section', 'calibration_scope');
+
     }
 
     public function saveTestingScope(Request $request, ApplicationForLab $applicationForLab)
@@ -544,35 +553,72 @@ class ApplicationController extends Controller
             return back()->withErrors($validator)->withInput()->with('open_section', 'testing_scope');
         }
         $applicationForLab->update($validator->validated());
+
         return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Testing scope saved successfully.')->with('open_section', 'testing_scope');
     }
 
     public function saveCalibrationFacility(Request $request, ApplicationForLab $applicationForLab)
     {
         $validator = Validator::make($request->all(), [
-            'calibration_fully' => 'required|string',
-            'calibration_fully_comment' => 'required|string',
-            'calibration_record' => 'required|string',
-            'calibration_record_comment' => 'required|string',
-            'calibration_adequate' => 'required|string',
-            'calibration_adequate_comment' => 'required|string',
-            'calibration_procedures' => 'required|string',
-            'calibration_procedures_comment' => 'required|string',
-            'calibration_internal' => 'required|string',
-            'calibration_internal_comment' => 'required|string',
-            'calibration_pnac' => 'required|string',
-            'calibration_pnac_comment' => 'required|string',
-            'calibration_other_comment' => 'required|string',
-            'calibration_lab_comment' => 'required|string',
-            'calibration_compliance' => 'required|string',
-            'calibration_rectified' => 'required|date',
+            'calibration_fully' => 'required|in:yes,no',
+            'calibration_fully_comment' => 'nullable|string',
+            'calibration_record' => 'required|in:yes,no',
+            'calibration_record_comment' => 'nullable|string',
+            'calibration_adequate' => 'required|in:yes,no',
+            'calibration_adequate_comment' => 'nullable|string',
+            'calibration_procedures' => 'required|in:yes,no',
+            'calibration_procedures_comment' => 'nullable|string',
+            'calibration_internal' => 'required|in:yes,no',
+            'calibration_internal_comment' => 'nullable|string',
+            'calibration_pnac' => 'required|in:yes,no',
+            'calibration_pnac_comment' => 'nullable|string',
+            'calibration_other_comment' => 'nullable|string',
+            'calibration_lab_comment' => 'nullable|string',
+            'calibration_compliance' => 'required|in:yes,no',
+            'calibration_compliance_comment' => 'nullable|string',
+            'calibration_non_compliance' => 'nullable|string',
+            'calibration_rectified' => 'nullable|date',
         ]);
+
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput()->with('open_section', 'calibration_facility');
         }
+
         $applicationForLab->update($validator->validated());
-        return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Calibration facility saved successfully.')->with('open_section', 'calibration_facility');
+
+        return redirect()
+            ->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])
+            ->with('success', 'Calibration facility saved successfully.')
+            ->with('open_section', 'calibration_facility');
     }
+
+    // public function saveCalibrationFacility(Request $request, ApplicationForLab $applicationForLab)
+    // {
+    //     $validator = Validator::make($request->all(), [
+    //         'calibration_fully' => 'required|string',
+    //         'calibration_fully_comment' => 'required|string',
+    //         'calibration_record' => 'required|string',
+    //         'calibration_record_comment' => 'required|string',
+    //         'calibration_adequate' => 'required|string',
+    //         'calibration_adequate_comment' => 'required|string',
+    //         'calibration_procedures' => 'required|string',
+    //         'calibration_procedures_comment' => 'required|string',
+    //         'calibration_internal' => 'required|string',
+    //         'calibration_internal_comment' => 'required|string',
+    //         'calibration_pnac' => 'required|string',
+    //         'calibration_pnac_comment' => 'required|string',
+    //         'calibration_other_comment' => 'required|string',
+    //         'calibration_lab_comment' => 'required|string',
+    //         'calibration_compliance' => 'required|string',
+    //         'calibration_rectified' => 'required|date',
+    //     ]);
+    //     if ($validator->fails()) {
+    //         return back()->withErrors($validator)->withInput()->with('open_section', 'calibration_facility');
+    //     }
+    //     $applicationForLab->update($validator->validated());
+
+    //     return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Calibration facility saved successfully.')->with('open_section', 'calibration_facility');
+    // }
 
     public function saveOtherApprovals(Request $request, ApplicationForLab $applicationForLab)
     {
@@ -586,28 +632,60 @@ class ApplicationController extends Controller
             return back()->withErrors($validator)->withInput()->with('open_section', 'other_approvals');
         }
         $applicationForLab->update($validator->validated());
+
         return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Other approvals saved successfully.')->with('open_section', 'other_approvals');
     }
 
+    // public function saveDeclaration(Request $request, ApplicationForLab $applicationForLab)
+    // {
+    //     $validator = Validator::make($request->all(), [
+    //         'declaration_calibration' => 'required|string|max:100',
+    //         'declaration_testing' => 'required|string|max:100',
+    //         'declaration_extension' => 'required|string|max:255',
+    //         'declaration_laboratory' => 'required|string|max:255',
+    //         'declaration_test_lab' => 'required|string|max:255',
+    //         'signed' => 'required|string|max:255',
+    //         'date' => 'required|date',
+    //     ]);
+    //     if ($validator->fails()) {
+    //         return back()->withErrors($validator)->withInput()->with('open_section', 'declaration');
+    //     }
+    //     $applicationForLab->update($validator->validated());
+
+    //     return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Declaration saved successfully.')->with('open_section', 'declaration');
+    // }
     public function saveDeclaration(Request $request, ApplicationForLab $applicationForLab)
     {
         $validator = Validator::make($request->all(), [
-            'declaration_calibration' => 'required|string|max:100',
-            'declaration_testing' => 'required|string|max:100',
-            'declaration_extension' => 'required|string|max:255',
-            'declaration_laboratory' => 'required|string|max:255',
-            'declaration_test_lab' => 'required|string|max:255',
+            'declaration_calibration' => 'nullable|in:yes',
+            'declaration_testing' => 'nullable|in:yes',
+            'declaration_extension' => 'nullable|in:yes',
+            'declaration_laboratory' => 'nullable|in:yes',
+            'declaration_test_lab' => 'nullable|in:yes',
+            'application_fee' => 'nullable|string|max:255',
             'signed' => 'required|string|max:255',
             'date' => 'required|date',
+            // 'upload_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
         ]);
+
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput()->with('open_section', 'declaration');
         }
-        $applicationForLab->update($validator->validated());
-        return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Declaration saved successfully.')->with('open_section', 'declaration');
+
+        $data = $validator->validated();
+
+        // Checkboxes ko explicitly 'no' set karna zaroori hai, warna update() unhe touch hi nahi karega
+        foreach (['declaration_calibration', 'declaration_testing', 'declaration_extension', 'declaration_laboratory', 'declaration_test_lab'] as $checkbox) {
+            $data[$checkbox] = $request->has($checkbox) ? 'yes' : 'no';
+        }
+
+        $applicationForLab->update($data);
+
+        return redirect()
+            ->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])
+            ->with('success', 'Declaration saved successfully.')
+            ->with('open_section', 'declaration');
     }
-
-
 
     public function viewScope(Request $request)
     {
@@ -616,7 +694,6 @@ class ApplicationController extends Controller
         $general = CertificationGeneral::where('user_id', auth()->user()->id)->where('category', $category)->where('application', $request->application)->first();
         $general_id = @$general->id;
         $scopes = ScopeFactory::getScopes($category, $general_id, $scope);
-
 
         $categoryViews = [
             'Certification Bodies' => 'admin.application.certification.view_scope',
@@ -631,7 +708,6 @@ class ApplicationController extends Controller
             'Personnel Certification Bodies' => 'admin.application.personnel.view_scope',
         ];
 
-
         $view = $categoryViews[$category] ?? 'admin.error.404';
         // dd($view);
 
@@ -639,152 +715,154 @@ class ApplicationController extends Controller
 
     }
 
-
     public function storeCertification(Request $request)
     {
 
         //  dd($request->all());
 
-        if($request->application == 'Renewal Application'){
+        if ($request->application == 'Renewal Application') {
             $general = CertificationGeneral::where('user_id', auth()->user()->id)
-            ->where('category', $request->category)
-            ->where('application', $request->application)->first();
+                ->where('category', $request->category)
+                ->where('application', $request->application)->first();
 
-        }else{
+        } else {
             $general = CertificationGeneral::where('user_id', auth()->user()->id)->where('category', $request->category)->first();
 
         }
 
-        if($request->type == 'general'){
+        if ($request->type == 'general') {
             $generalData = $request->only((new CertificationGeneral)->getFillable());
             $generalData['user_id'] = auth()->user()->id;
-            $saved=CertificationGeneral::create($generalData);
+            $saved = CertificationGeneral::create($generalData);
             // $generalData = CertificationGeneral::where('id', $request->general_id)->updateOrCreate($generalData);
 
             session(['application_id' => $saved->id]);
+
             // dd(session()->all());
             return redirect()->back()->with('show_section', 'Employee');
 
-        }elseif($request->type == 'employee'){
-            if(!empty($general)){
+        } elseif ($request->type == 'employee') {
+            if (! empty($general)) {
 
                 $employeeData = $request->only((new CertificationEmployee)->getFillable());
                 $employeeData['user_id'] = auth()->user()->id;
-                $employeeData['certification_general_id'] =  session('application_id');
+                $employeeData['certification_general_id'] = session('application_id');
                 // dd($employeeData);
                 $employee = CertificationEmployee::create($employeeData);
+
                 // dd($employee);
                 // session()->flash('success', 'Employee added successfully');
                 return redirect()->back()->with('show_section', 'Employee');
-            }else{
+            } else {
                 return redirect()->back()->with('error', 'Please fill first general Information');
             }
 
-        }elseif($request->type == 'scope'){
+        } elseif ($request->type == 'scope') {
             // if(!empty($general)){
-                if($request->category == 'Certification Bodies')
-                {
-                    $scopeData = $request->only((new CertificationScope)->getFillable());
-                    $scopeData['user_id'] = auth()->user()->id;
-                    $scopeData['certification_general_id'] = session('application_id');
-                    $scope = CertificationScope::create($scopeData);
-                    return redirect()->back()->with('show_section', 'Certification Bodies');
+            if ($request->category == 'Certification Bodies') {
+                $scopeData = $request->only((new CertificationScope)->getFillable());
+                $scopeData['user_id'] = auth()->user()->id;
+                $scopeData['certification_general_id'] = session('application_id');
+                $scope = CertificationScope::create($scopeData);
 
-                }
-                elseif($request->scope_type == 'Testing' || $request->scope_type == 'Testing Calibration Laboratories'){
-                    $testingData = $request->only((new TestingScope)->getFillable());
-                    $testingData['user_id'] = auth()->user()->id;
-                    $testingData['certification_general_id'] = session('application_id');
-                    $testing = TestingScope::create($testingData);
+                return redirect()->back()->with('show_section', 'Certification Bodies');
 
-                    session()->flash('success', 'Testing added successfully');
-                    return redirect()->back()->with('show_section', 'Scope');
-                }
-                elseif($request->scope_type == 'Calibration' || $request->scope_type == 'Testing Calibration Laboratories'){
-                    $calibrationData = $request->only((new CalibrationScope)->getFillable());
-                    $calibrationData['user_id'] = auth()->user()->id;
-                    $calibrationData['certification_general_id'] = session('application_id');
-                    $calibration = CalibrationScope::create($calibrationData);
+            } elseif ($request->scope_type == 'Testing' || $request->scope_type == 'Testing Calibration Laboratories') {
+                $testingData = $request->only((new TestingScope)->getFillable());
+                $testingData['user_id'] = auth()->user()->id;
+                $testingData['certification_general_id'] = session('application_id');
+                $testing = TestingScope::create($testingData);
 
-                    session()->flash('success', 'Calibration added successfully');
-                    return redirect()->back()->with('show_section', 'Scope');
-                }
-                elseif($request->scope_type == 'Medical'){
-                    $medicalData = $request->only((new MedicalScope)->getFillable());
-                    $medicalData['user_id'] = auth()->user()->id;
-                    $medicalData['certification_general_id'] = session('application_id');
-                    $medical = MedicalScope::create($medicalData);
+                session()->flash('success', 'Testing added successfully');
 
-                    session()->flash('success', 'Medical laboratories added successfully');
-                    return redirect()->back()->with('show_section', 'Scope');
-                }
-                elseif($request->scope_type == 'Inspection'){
-                    $inspectionData = $request->only((new InspectionScope)->getFillable());
-                    $inspectionData['user_id'] = auth()->user()->id;
-                    $inspectionData['certification_general_id'] = session('application_id');
-                    $inspection = InspectionScope::create($inspectionData);
-                    session()->flash('success', 'Inspection Bodies added successfully');
-                    return redirect()->back()->with('show_section', 'Scope');
-                }
-                elseif($request->scope_type == 'Halal'){
-                    $halalData = $request->only((new HalalScope)->getFillable());
-                    $halalData['user_id'] = auth()->user()->id;
-                    $halalData['certification_general_id'] = session('application_id');
-                    $halal = HalalScope::create($halalData);
-                    session()->flash('success', 'Halal Certification Bodies added successfully');
-                    return redirect()->back()->with('show_section', 'Scope');
-                }
-                elseif($request->scope_type == 'Proficiency'){
-                    $proficiencyData = $request->only((new ProficiencyScope)->getFillable());
-                    $proficiencyData['user_id'] = auth()->user()->id;
-                    $proficiencyData['certification_general_id'] = session('application_id');
-                    $proficiency = ProficiencyScope::create($proficiencyData);
-                    session()->flash('success', 'Proficiency Testing Provider added successfully');
-                    return redirect()->back()->with('show_section', 'Scope');
-                }
-                elseif($request->scope_type == 'Product'){
-                    $productData = $request->only((new ProductScope)->getFillable());
-                    $productData['user_id'] = auth()->user()->id;
-                    $productData['certification_general_id'] = session('application_id');
-                    $product = ProductScope::create($productData);
-                    session()->flash('success', 'Product Certification Bodies added successfully');
-                    return redirect()->back()->with('show_section', 'Scope');
-                }
-                elseif($request->category == 'Personnel Certification Bodies'){
-                    $personnelData = $request->only((new PersonnelScope)->getFillable());
-                    $personnelData['user_id'] = auth()->user()->id;
-                    $personnelData['certification_general_id'] = session('application_id');
-                    $product = PersonnelScope::create($personnelData);
-                    session()->flash('success', 'Personnel Certification Bodies added successfully');
-                    return redirect()->back()->with('show_section', 'Scope');
-                }
+                return redirect()->back()->with('show_section', 'Scope');
+            } elseif ($request->scope_type == 'Calibration' || $request->scope_type == 'Testing Calibration Laboratories') {
+                $calibrationData = $request->only((new CalibrationScope)->getFillable());
+                $calibrationData['user_id'] = auth()->user()->id;
+                $calibrationData['certification_general_id'] = session('application_id');
+                $calibration = CalibrationScope::create($calibrationData);
+
+                session()->flash('success', 'Calibration added successfully');
+
+                return redirect()->back()->with('show_section', 'Scope');
+            } elseif ($request->scope_type == 'Medical') {
+                $medicalData = $request->only((new MedicalScope)->getFillable());
+                $medicalData['user_id'] = auth()->user()->id;
+                $medicalData['certification_general_id'] = session('application_id');
+                $medical = MedicalScope::create($medicalData);
+
+                session()->flash('success', 'Medical laboratories added successfully');
+
+                return redirect()->back()->with('show_section', 'Scope');
+            } elseif ($request->scope_type == 'Inspection') {
+                $inspectionData = $request->only((new InspectionScope)->getFillable());
+                $inspectionData['user_id'] = auth()->user()->id;
+                $inspectionData['certification_general_id'] = session('application_id');
+                $inspection = InspectionScope::create($inspectionData);
+                session()->flash('success', 'Inspection Bodies added successfully');
+
+                return redirect()->back()->with('show_section', 'Scope');
+            } elseif ($request->scope_type == 'Halal') {
+                $halalData = $request->only((new HalalScope)->getFillable());
+                $halalData['user_id'] = auth()->user()->id;
+                $halalData['certification_general_id'] = session('application_id');
+                $halal = HalalScope::create($halalData);
+                session()->flash('success', 'Halal Certification Bodies added successfully');
+
+                return redirect()->back()->with('show_section', 'Scope');
+            } elseif ($request->scope_type == 'Proficiency') {
+                $proficiencyData = $request->only((new ProficiencyScope)->getFillable());
+                $proficiencyData['user_id'] = auth()->user()->id;
+                $proficiencyData['certification_general_id'] = session('application_id');
+                $proficiency = ProficiencyScope::create($proficiencyData);
+                session()->flash('success', 'Proficiency Testing Provider added successfully');
+
+                return redirect()->back()->with('show_section', 'Scope');
+            } elseif ($request->scope_type == 'Product') {
+                $productData = $request->only((new ProductScope)->getFillable());
+                $productData['user_id'] = auth()->user()->id;
+                $productData['certification_general_id'] = session('application_id');
+                $product = ProductScope::create($productData);
+                session()->flash('success', 'Product Certification Bodies added successfully');
+
+                return redirect()->back()->with('show_section', 'Scope');
+            } elseif ($request->category == 'Personnel Certification Bodies') {
+                $personnelData = $request->only((new PersonnelScope)->getFillable());
+                $personnelData['user_id'] = auth()->user()->id;
+                $personnelData['certification_general_id'] = session('application_id');
+                $product = PersonnelScope::create($personnelData);
+                session()->flash('success', 'Personnel Certification Bodies added successfully');
+
+                return redirect()->back()->with('show_section', 'Scope');
+            }
             // }else{
             //     return redirect()->back()->with('error', 'Please fill first general Information');
             // }
             // session()->flash('success', 'Scope added successfully');
 
-        }elseif($request->type == 'declaration'){
+        } elseif ($request->type == 'declaration') {
             // dd('declaration');
-            if(!empty($general)){
+            if (! empty($general)) {
                 $declarationData = $request->only((new CertificationDeclaration)->getFillable());
                 $declarationData['user_id'] = auth()->user()->id;
                 $declarationData['certification_general_id'] = session('application_id');
                 if ($request->hasFile('upload_file') && $request->file('upload_file')->isValid()) {
                     $image = $request->file('upload_file');
                     $timestamp = now()->format('Ymd_His');
-                    $filename = 'application_' . $timestamp . '.' . $image->getClientOriginalExtension();
+                    $filename = 'application_'.$timestamp.'.'.$image->getClientOriginalExtension();
                     $path = $image->storeAs('applications', $filename, 'public');
                     $declarationData['upload_file'] = $path;
                 }
                 $declaration = CertificationDeclaration::create($declarationData);
                 // dd($declaration);
                 session()->flash('success', 'Application Submited Successfully');
+
                 return redirect()->route('application.submited.index');
-            }else{
+            } else {
                 return redirect()->back()->with('error', 'Please fill first general Information');
             }
-        }elseif($request->type == 'document'){
-            if(!empty($general)){
+        } elseif ($request->type == 'document') {
+            if (! empty($general)) {
                 $documentData = $request->only((new DocumentDetail)->getFillable());
                 $documentData['user_id'] = auth()->user()->id;
                 $documentData['certification_general_id'] = session('application_id');
@@ -792,7 +870,7 @@ class ApplicationController extends Controller
                 if ($request->hasFile('upload_doc')) {
                     $image = $request->file('upload_doc');
                     $timestamp = now()->format('Ymd_His');
-                    $filename = 'document_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
+                    $filename = 'document_'.auth()->id().'_'.$timestamp.'.'.$image->getClientOriginalExtension();
                     $path = $image->storeAs('Documents', $filename, 'public');
                     $documentData['upload_doc'] = $path;
                 }
@@ -801,11 +879,10 @@ class ApplicationController extends Controller
 
                 // session()->flash('success', 'Document added successfully');
                 return redirect()->back()->with('show_section', 'Document');
-            }else{
+            } else {
                 return redirect()->back()->with('error', 'Please fill first general Information');
             }
-        }
-        else{
+        } else {
             return view('admin.error.404');
         }
 
@@ -813,75 +890,64 @@ class ApplicationController extends Controller
 
     }
 
-
-
     public function updateCertification(Request $request, $id)
     {
         // dd($request->all());
-        //dd($request->all());
-        if($request->type == 'employee'){
+        // dd($request->all());
+        if ($request->type == 'employee') {
             $employeeData = $request->only((new CertificationEmployee)->getFillable());
             $employee = CertificationEmployee::where('id', $id)->update($employeeData);
             session()->flash('success', 'Employee updated successfully');
 
-        }elseif($request->type == 'scope'){
+        } elseif ($request->type == 'scope') {
             // $scopeData = $request->only((new CertificationScope)->getFillable());
             // $scopeData['user_id'] = auth()->user()->id;
             // $scope = CertificationScope::where('id', $id)->update($scopeData);
 
-            if($request->category == 'certification')
-            {
+            if ($request->category == 'certification') {
                 $scopeData = $request->only((new CertificationScope)->getFillable());
                 $scope = CertificationScope::where('id', $id)->update($scopeData);
                 session()->flash('success', 'Certification Bodies Scope updated successfully');
-            }
-            elseif($request->category == 'testing'){
+            } elseif ($request->category == 'testing') {
                 $testingData = $request->only((new TestingScope)->getFillable());
 
                 $testing = TestingScope::where('id', $id)->update($testingData);
 
                 session()->flash('success', 'Testing Scope updated successfully');
-            }
-            elseif($request->category == 'calibration'){
+            } elseif ($request->category == 'calibration') {
                 $calibrationData = $request->only((new CalibrationScope)->getFillable());
                 $calibration = CalibrationScope::where('id', $id)->update($calibrationData);
 
                 session()->flash('success', 'Calibration Scope updated successfully');
-            }
-            elseif($request->category == 'medical'){
+            } elseif ($request->category == 'medical') {
                 // dd('medical');
                 $medicalData = $request->only((new MedicalScope)->getFillable());
                 $medical = MedicalScope::where('id', $id)->update($medicalData);
 
                 session()->flash('success', 'Medical laboratories Scope updated successfully');
-            }
-            elseif($request->category == 'inspection'){
+            } elseif ($request->category == 'inspection') {
                 $inspectionData = $request->only((new InspectionScope)->getFillable());
                 $inspection = InspectionScope::where('id', $id)->update($inspectionData);
                 session()->flash('success', 'Inspection Bodies updated Scope successfully');
-            }
-            elseif($request->category == 'halal'){
+            } elseif ($request->category == 'halal') {
                 $halalData = $request->only((new HalalScope)->getFillable());
                 $halal = HalalScope::where('id', $id)->update($halalData);
                 session()->flash('success', 'Halal Certification Bodies Scope updated successfully');
-            }
-            elseif($request->category == 'proficiency'){
+            } elseif ($request->category == 'proficiency') {
                 $proficiencyData = $request->only((new ProficiencyScope)->getFillable());
                 $proficiency = ProficiencyScope::where('id', $id)->update($proficiencyData);
                 session()->flash('success', 'Proficiency Testing Provider Scope updated successfully');
-            }
-            elseif($request->category == 'product'){
+            } elseif ($request->category == 'product') {
                 $productData = $request->only((new ProductScope)->getFillable());
                 $product = ProductScope::where('id', $id)->update($productData);
                 session()->flash('success', 'Product Certification Bodies Scope updated successfully');
-            }
-            elseif($request->category == 'personnel'){
+            } elseif ($request->category == 'personnel') {
                 $personnelData = $request->only((new PersonnelScope)->getFillable());
                 $personnel = PersonnelScope::where('id', $id)->update($personnelData);
                 session()->flash('success', 'Personnel Certification Bodies Scope updated successfully');
             }
 
-        }elseif($request->type == 'declaration'){
+        } elseif ($request->type == 'declaration') {
             $declarationData = $request->only((new CertificationDeclaration)->getFillable());
             // $declarationData['user_id'] = auth()->user()->id;
             // if ($request->hasFile('signed')) {
@@ -893,7 +959,7 @@ class ApplicationController extends Controller
             // }
             $scope = CertificationDeclaration::where('id', $id)->update($declarationData);
 
-        }elseif($request->type == 'document'){
+        } elseif ($request->type == 'document') {
             $document = DocumentDetail::findOrFail($id);
             $documentData = $request->only((new DocumentDetail)->getFillable());
 
@@ -903,25 +969,22 @@ class ApplicationController extends Controller
                 }
                 $image = $request->file('upload_doc');
                 $timestamp = now()->format('Ymd_His');
-                $filename = 'document_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
+                $filename = 'document_'.auth()->id().'_'.$timestamp.'.'.$image->getClientOriginalExtension();
                 $path = $image->storeAs('Documents', $filename, 'public');
                 $documentData['upload_doc'] = $path;
             }
             $document->update($documentData);
             session()->flash('success', 'Document updated successfully');
+
             return redirect()->back()->with('show_section', 'Document');
 
-        }
-        else{
+        } else {
             return view('admin.error.404');
         }
 
         return redirect()->back();
 
     }
-
-
-
 
     // public function applicationStore(Request $request)
     // {
@@ -1025,8 +1088,6 @@ class ApplicationController extends Controller
     //     return to_route('application.index')->with('success', 'Application Added Successfully');
     // }
 
-
-
     // public function applicationEdit($id, $category)
     // {
     //     // dd($category);
@@ -1068,10 +1129,8 @@ class ApplicationController extends Controller
     //         return view('admin.error.404');
     //     }
 
-
     //     return view('admin.application.edit', compact('application', 'certification', 'medical', 'inspection', 'halal', 'proficiency', 'product', 'personnel', 'scheme_name'));
     // }
-
 
     // public function applicationShow($id, $category)
     // {
@@ -1114,10 +1173,8 @@ class ApplicationController extends Controller
     //         return view('admin.error.404');
     //     }
 
-
     //     return view('admin.application.show', compact('application', 'certification', 'medical', 'inspection', 'halal', 'proficiency', 'product', 'personnel', 'scheme_name'));
     // }
-
 
     // public function applicationUpdate(Request $request, $id)
     // {
@@ -1218,9 +1275,6 @@ class ApplicationController extends Controller
     //     return to_route('application.index')->with('success', 'Application Deleted Successfully');
     // }
 
-
-
-
     // Store Document
     public function documentStore(Request $request)
     {
@@ -1235,7 +1289,7 @@ class ApplicationController extends Controller
 
         if ($request->hasFile('upload_doc')) {
             $file = $request->file('upload_doc');
-            $filename = date('dmy') . '_sign_' . time() . '.' . $file->getClientOriginalExtension();
+            $filename = date('dmy').'_sign_'.time().'.'.$file->getClientOriginalExtension();
             $path = $file->storeAs('Documents_', $filename, 'public');
         }
         $usr_id = auth()->user()->id;
@@ -1254,7 +1308,7 @@ class ApplicationController extends Controller
 
     public function submitedApplication()
     {
-        $certifications = CertificationGeneral::with('application_statuses')->withWhereHas('declaration', function($query){
+        $certifications = CertificationGeneral::with('application_statuses')->withWhereHas('declaration', function ($query) {
             $query->where('status', 'submited');
         })->where('user_id', auth()->user()->id)->get();
 
@@ -1264,7 +1318,6 @@ class ApplicationController extends Controller
 
         return view('admin.application.submited_index', compact('certifications'));
     }
-
 
     public function viewSubmitedApplication($id)
     {
@@ -1281,14 +1334,12 @@ class ApplicationController extends Controller
         return view('admin.application.view_submited', compact('general', 'data', 'scopes', 'user', 'schemes', 'declarations'));
     }
 
-
     public function getIafCodes(Request $request, $clusterId)
     {
         $iafCodes = FirstIafCode::where('technical_cluster_id', $clusterId)->where('code', $request->cluster_code)->get(['id', 'iaf_code', 'description']);
 
         return response()->json($iafCodes);
     }
-
 
     public function getTechnicalAreas($mainId)
     {
@@ -1303,16 +1354,17 @@ class ApplicationController extends Controller
             ->get();
     }
 
-
     public function getCategories(Request $request)
     {
         $categories = Category22000::where('cluster_id', $request->cluster_id)->get();
+
         return response()->json($categories);
     }
 
     public function getSubcategories(Request $request)
     {
         $subcategories = SubCategory22000::where('category_id', $request->category_id)->get();
+
         return response()->json($subcategories);
     }
 
@@ -1331,7 +1383,4 @@ class ApplicationController extends Controller
 
         return view('admin.application.certification.show.certification_bodies_show', compact('application'));
     }
-
-
-
 }
