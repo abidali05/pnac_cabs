@@ -2011,7 +2011,11 @@
 @include('admin.application.certification.modal')
 @endif
 
-@include('admin.application.certification.vertical_form')
+@if (($scheme_name ?? request('scheme_name')) === 'Certification Bodies')
+    @include('admin.application.certification_bodies.form')
+@else
+    @include('admin.application.certification.vertical_form')
+@endif
 
 
 
@@ -2026,7 +2030,7 @@
 
         const hasBootstrapCollapse = typeof bootstrap !== 'undefined' && typeof bootstrap.Collapse !==
             'undefined';
-        const preferredOpenSection = '{{ session('open_section', request('edit_section')) }}';
+        const preferredOpenSection = '{{ session('open_section') ?: request('open_section') ?: request('edit_section') }}';
 
         cards.forEach(function(card, index) {
             const header = card.querySelector(':scope > .d-flex.justify-content-between');
@@ -2222,11 +2226,16 @@
                         firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         firstInvalid.focus();
                     }
+                    return;
                 }
+
             });
         });
     });
 </script>
+@if (($scheme_name ?? request('scheme_name')) === 'Certification Bodies')
+    <script src="{{ asset('js/certification-bodies.js') }}"></script>
+@endif
 @if (false)
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.9.0/dist/summernote.min.js"></script>

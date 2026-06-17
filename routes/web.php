@@ -12,7 +12,6 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
-
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -29,14 +28,15 @@ use Illuminate\Support\Facades\Route;
 // });
 Route::get('/optimize', function () {
     Artisan::call('optimize');
+
     return 'Optimized successfully!';
 });
 
 Route::get('/create-storage-link', function () {
     Artisan::call('storage:link');
+
     return 'Storage link created!';
 });
-
 
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -52,10 +52,11 @@ Route::get('/email/verify', function () {
 
 Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
     $request->fulfill(); // marks user as verified
+
     return redirect('/dashboard'); // or wherever
 })->middleware(['auth', 'signed'])->name('verification.verify');
 
-Route::get('active-account/{email}',[UserController::class, 'active_account'])->name('active_account');
+Route::get('active-account/{email}', [UserController::class, 'active_account'])->name('active_account');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -85,6 +86,10 @@ Route::middleware('auth')->group(function () {
             Route::post('{applicationForLab}/save-calibration-facility', 'saveCalibrationFacility')->name('saveCalibrationFacility');
             Route::post('{applicationForLab}/save-other-approvals', 'saveOtherApprovals')->name('saveOtherApprovals');
             Route::post('{applicationForLab}/save-declaration', 'saveDeclaration')->name('saveDeclaration');
+
+            Route::post('certification-bodies/{cbApplication}/{section}/save', 'saveCbSection')->name('certification.save-section');
+            Route::post('certification-bodies/{cbApplication}/documents', 'uploadCbDocument')->name('certification.documents.store');
+            Route::delete('certification-bodies/{cbApplication}/documents/{document}', 'deleteCbDocument')->name('certification.documents.destroy');
             Route::get('view-scope', 'viewScope')->name('view.scope');
 
             Route::get('submited-application', 'submitedApplication')->name('submited.index');
@@ -98,8 +103,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/get-categories', 'getCategories')->name('get.categories');
             Route::get('/get-subcategories', 'getSubcategories')->name('get.subcategories');
 
-
-    });
+        });
         // Document store
         Route::post('/document-detail/create', [ApplicationController::class, 'documentStore'])->name('document-detail.create');
 
@@ -121,8 +125,6 @@ Route::middleware('auth')->group(function () {
 
         // Scheme
         Route::resource('scheme', SchemeController::class);
-
-
 
     });
 });

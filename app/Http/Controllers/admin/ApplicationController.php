@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ApplicationForLab;
 use App\Models\CalibrationScope;
 use App\Models\Category22000;
+use App\Models\CbApplication;
 use App\Models\CertificationBody;
 use App\Models\CertificationDeclaration;
 use App\Models\CertificationEmployee;
@@ -41,6 +42,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class ApplicationController extends Controller
 {
@@ -241,6 +243,24 @@ class ApplicationController extends Controller
 
         $referenceNumber = 'CAB-'.now()->format('Ymd').rand(1000, 9999); // Example: CAB-20250806-4572
 
+        $cbApplication = null;
+        $cbData = [];
+        if ($scheme_name === 'Certification Bodies') {
+            $cbApplication = CbApplication::firstOrCreate(
+                [
+                    'created_by' => auth()->id(),
+                    'scheme_name' => $scheme_name,
+                    'application_type' => $application ?: 'New Application',
+                    'status' => 'Draft',
+                ],
+                [
+                    'application_no' => $referenceNumber,
+                ]
+            );
+
+            $cbData = $this->loadCbApplicationData($cbApplication);
+        }
+
         $labApplication = ApplicationForLab::updateOrCreate(
             [
                 'user_id' => auth()->id(),
@@ -260,7 +280,59 @@ class ApplicationController extends Controller
             'declaration' => ! empty($labApplication->signed) || ! empty($labApplication->date),
         ];
 
-        return view('admin.application.certification.index', compact('labApplication', 'savedSections', 'scopes', 'scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries'));
+        return view('admin.application.certification.index', compact('cbApplication', 'cbData', 'labApplication', 'savedSections', 'scopes', 'scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries'));
+    }
+
+    private function loadCbApplicationData(CbApplication $application): array
+    {
+        $tables = [
+            'contact' => 'cb_contacts',
+            'sub_offices' => 'cb_sub_offices',
+            'requested_scopes' => 'cb_requested_scopes',
+            'documents' => 'cb_documents',
+            'authorized_person' => 'cb_authorized_persons',
+            'parent_organization' => 'cb_parent_organizations',
+            'invoice_address' => 'cb_invoice_addresses',
+            'consultant' => 'cb_consultants',
+            'staff_roles' => 'cb_staff_roles',
+            'management_members' => 'cb_management_members',
+            'permanent_auditors' => 'cb_permanent_auditors',
+            'freelance_auditors' => 'cb_freelance_auditors',
+            'qms_scopes' => 'cb_qms_scopes',
+            'ems_scopes' => 'cb_ems_scopes',
+            'ohs_scopes' => 'cb_ohs_scopes',
+            'fsms_scopes' => 'cb_fsms_scopes',
+            'mdqms_scopes' => 'cb_mdqms_scopes',
+            'isms_scopes' => 'cb_isms_scopes',
+            'non_compliance' => 'cb_non_compliance',
+            'other_approvals' => 'cb_other_approvals',
+            'declaration' => 'cb_declarations',
+        ];
+
+        $data = [];
+        foreach ($tables as $key => $table) {
+            $rows = DB::table($table)->where('application_id', $application->id)->get();
+            $data[$key] = str_contains($key, 'contact') || in_array($key, ['authorized_person', 'parent_organization', 'invoice_address', 'consultant', 'declaration'], true)
+                ? $rows->first()
+                : $rows;
+        }
+
+        $savedSections = [
+            'basic_info' => ! empty($application->organization_name),
+            'body_info' => ! empty(optional($data['contact'])->certification_body_name),
+            'accreditation_request' => $data['requested_scopes']->isNotEmpty(),
+            'documents' => $data['documents']->isNotEmpty(),
+            'about_yourselves' => ! empty(optional($data['authorized_person'])->name),
+            'staff_info' => $data['staff_roles']->isNotEmpty() || $data['management_members']->isNotEmpty(),
+            'scope_application' => $data['qms_scopes']->isNotEmpty() || $data['fsms_scopes']->isNotEmpty() || $data['isms_scopes']->isNotEmpty(),
+            'quality_system' => $data['non_compliance']->isNotEmpty(),
+            'other_approvals' => $data['other_approvals']->isNotEmpty(),
+            'declaration' => (bool) optional($data['declaration'])->declaration_accepted,
+        ];
+
+        $data['saved_sections'] = $savedSections;
+
+        return $data;
     }
 
     public function saveBasicInfo(Request $request, ApplicationForLab $applicationForLab)
@@ -1127,6 +1199,384 @@ class ApplicationController extends Controller
     // }
 
     // Store Document
+    public function saveCbSection(Request $request, CbApplication $cbApplication, string $section)
+    {
+        abort_unless($cbApplication->created_by === auth()->id(), 403);
+        abort_if($cbApplication->status === 'Submitted', 403, 'Submitted applications cannot be edited.');
+
+        $sectionHandlers = [
+            'basic_info' => 'saveCbBasicInfo',
+            // 'body_info' => 'saveCbBodyInfo',
+            // 'accreditation_request' => 'saveCbAccreditationRequest',
+            'about_yourselves' => 'saveCbAboutYourselves',
+            'staff_info' => 'saveCbStaffInfo',
+            'scope_application' => 'saveCbScopeApplication',
+            'quality_system' => 'saveCbQualitySystem',
+            'other_approvals' => 'saveCbOtherApprovals',
+            'declaration' => 'saveCbDeclaration',
+        ];
+
+        abort_unless(isset($sectionHandlers[$section]), 404);
+
+        return $this->{$sectionHandlers[$section]}($request, $cbApplication);
+    }
+
+    // public function uploadCbDocument(Request $request, CbApplication $cbApplication)
+    // {
+    //     abort_unless($cbApplication->created_by === auth()->id(), 403);
+    //     abort_if($cbApplication->status === 'Submitted', 403, 'Submitted applications cannot be edited.');
+
+    //     $data = $request->validate([
+    //         'document_type' => 'required|string|max:100',
+    //         'document_file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:5120',
+    //     ]);
+
+    //     $existing = DB::table('cb_documents')
+    //         ->where('application_id', $cbApplication->id)
+    //         ->where('document_type', $data['document_type'])
+    //         ->first();
+
+    //     if ($existing && Storage::disk('public')->exists($existing->file_path)) {
+    //         Storage::disk('public')->delete($existing->file_path);
+    //     }
+
+    //     $file = $request->file('document_file');
+    //     $safeType = Str::slug($data['document_type']);
+    //     $fileName = $safeType.'_'.now()->format('YmdHis').'.'.$file->getClientOriginalExtension();
+    //     $path = $file->storeAs("applications/certification-bodies/{$cbApplication->id}/{$safeType}", $fileName, 'public');
+
+    //     DB::table('cb_documents')->updateOrInsert(
+    //         [
+    //             'application_id' => $cbApplication->id,
+    //             'document_type' => $data['document_type'],
+    //         ],
+    //         [
+    //             'file_name' => $fileName,
+    //             'original_name' => $file->getClientOriginalName(),
+    //             'file_path' => $path,
+    //             'mime_type' => $file->getMimeType(),
+    //             'uploaded_by' => auth()->id(),
+    //             'updated_at' => now(),
+    //             'created_at' => $existing->created_at ?? now(),
+    //         ]
+    //     );
+
+    //     return back()->with('success', 'Document saved successfully.')->with('open_section', 'documents');
+    // }
+
+    // public function deleteCbDocument(CbApplication $cbApplication, int $document)
+    // {
+    //     abort_unless($cbApplication->created_by === auth()->id(), 403);
+    //     abort_if($cbApplication->status === 'Submitted', 403, 'Submitted applications cannot be edited.');
+
+    //     $row = DB::table('cb_documents')
+    //         ->where('application_id', $cbApplication->id)
+    //         ->where('id', $document)
+    //         ->first();
+
+    //     if ($row && Storage::disk('public')->exists($row->file_path)) {
+    //         Storage::disk('public')->delete($row->file_path);
+    //     }
+
+    //     DB::table('cb_documents')->where('application_id', $cbApplication->id)->where('id', $document)->delete();
+
+    //     return back()->with('success', 'Document deleted successfully.')->with('open_section', 'documents');
+    // }
+
+    private function saveCbBasicInfo(Request $request, CbApplication $application)
+    {
+        $data = $request->validate([
+            'scheme_name' => 'required|string|max:255',
+            'application_type' => 'required|string|max:255',
+            'application_no' => 'nullable|string|max:255',
+            'organization_name' => 'required|string|max:255',
+            'accreditation_type' => 'nullable|string|max:255',
+        ]);
+
+        $application->update(array_merge($data, ['status' => 'Draft']));
+
+        return $this->cbSectionResponse($request, 'Basic application information saved.', 'basic_info');
+    }
+
+    // private function saveCbBodyInfo(Request $request, CbApplication $application)
+    // {
+    //     $data = $request->validate([
+    //         'certification_body_name' => 'required|string|max:255',
+    //         'address' => 'required|string',
+    //         'postcode' => 'nullable|string|max:50',
+    //         'telephone' => 'nullable|string|max:100',
+    //         'fax' => 'nullable|string|max:100',
+    //         'contact_name' => 'required|string|max:255',
+    //         'designation' => 'nullable|string|max:255',
+    //         'contact_address' => 'nullable|string',
+    //         'contact_postcode' => 'nullable|string|max:50',
+    //         'contact_telephone' => 'nullable|string|max:100',
+    //         'contact_fax' => 'nullable|string|max:100',
+    //         'email' => 'required|email|max:255',
+    //         'sub_offices' => 'nullable|array',
+    //         'sub_offices.*.office_name' => 'nullable|string|max:255',
+    //         'sub_offices.*.city' => 'nullable|string|max:255',
+    //         'sub_offices.*.address' => 'nullable|string',
+    //     ]);
+
+    //     dd($data);
+    //     $subOffices = $data['sub_offices'] ?? [];
+    //     unset($data['sub_offices']);
+    //     DB::table('cb_contacts')->updateOrInsert(['application_id' => $application->id], $this->timestamps($data));
+    //     $this->replaceRows('cb_sub_offices', $application->id, $subOffices);
+
+    //     return $this->cbSectionResponse($request, 'Certification body information saved.', 'body_info');
+    // }
+
+    // private function saveCbAccreditationRequest(Request $request, CbApplication $application)
+    // {
+    //     $data = $request->validate([
+    //         'new_accreditation' => 'nullable|array',
+    //         'new_accreditation.*' => 'string|max:100',
+    //         'other_management_system' => 'nullable|string|max:255',
+    //         'extension_scope' => 'nullable|in:1',
+    //     ]);
+
+    //     DB::table('cb_requested_scopes')->where('application_id', $application->id)->delete();
+    //     foreach ($data['new_accreditation'] ?? [] as $scope) {
+    //         DB::table('cb_requested_scopes')->insert($this->timestamps([
+    //             'application_id' => $application->id,
+    //             'scope_type' => 'New Accreditation',
+    //             'scope_name' => $scope,
+    //             'other_management_system' => $scope === 'Other' ? ($data['other_management_system'] ?? null) : null,
+    //         ]));
+    //     }
+    //     if (! empty($data['extension_scope'])) {
+    //         DB::table('cb_requested_scopes')->insert($this->timestamps([
+    //             'application_id' => $application->id,
+    //             'scope_type' => 'Extension of Scope',
+    //             'scope_name' => 'Extension of Scope',
+    //         ]));
+    //     }
+
+    //     return $this->cbSectionResponse($request, 'Accreditation request saved.', 'accreditation_request');
+    // }
+
+    private function saveCbAboutYourselves(Request $request, CbApplication $application)
+    {
+        $data = $request->validate([
+            'authorized_person.title' => 'nullable|string|max:100',
+            'authorized_person.name' => 'required|string|max:255',
+            'authorized_person.position' => 'nullable|string|max:255',
+            'parent_organization.parent_organization' => 'nullable|string|max:255',
+            'parent_organization.relationship' => 'nullable|string|max:255',
+            'parent_organization.address' => 'nullable|string',
+            'parent_organization.postcode' => 'nullable|string|max:50',
+            'parent_organization.telephone' => 'nullable|string|max:100',
+            'parent_organization.fax' => 'nullable|string|max:100',
+            'parent_organization.ownership_type' => 'nullable|string|max:255',
+            'parent_organization.ownership_other_description' => 'nullable|string',
+            'parent_organization.main_activity' => 'nullable|in:yes,no',
+            'parent_organization.main_activity_description' => 'nullable|string',
+            'invoice_address.organization' => 'nullable|string|max:255',
+            'invoice_address.address' => 'nullable|string',
+            'invoice_address.postcode' => 'nullable|string|max:50',
+            'invoice_address.telephone' => 'nullable|string|max:100',
+            'invoice_address.fax' => 'nullable|string|max:100',
+            'consultant.consultant_name' => 'nullable|string|max:255',
+            'consultant.organization' => 'nullable|string|max:255',
+            'consultant.address' => 'nullable|string',
+            'consultant.postcode' => 'nullable|string|max:50',
+            'consultant.telephone' => 'nullable|string|max:100',
+            'consultant.fax' => 'nullable|string|max:100',
+            'consultant.email' => 'nullable|email|max:255',
+        ]);
+
+        foreach ([
+            'authorized_person' => 'cb_authorized_persons',
+            'parent_organization' => 'cb_parent_organizations',
+            'invoice_address' => 'cb_invoice_addresses',
+            'consultant' => 'cb_consultants',
+        ] as $key => $table) {
+            DB::table($table)->updateOrInsert(['application_id' => $application->id], $this->timestamps($data[$key] ?? []));
+        }
+
+        return $this->cbSectionResponse($request, 'About yourselves saved.', 'about_yourselves');
+    }
+
+    private function saveCbStaffInfo(Request $request, CbApplication $application)
+    {
+        $data = $request->validate([
+            'chief_executive' => 'nullable|array',
+            'quality_representative' => 'nullable|array',
+            'management_members' => 'nullable|array',
+            'permanent_auditors' => 'nullable|array',
+            'freelance_auditors' => 'nullable|array',
+        ]);
+
+        DB::table('cb_staff_roles')->where('application_id', $application->id)->delete();
+        foreach (['chief_executive' => 'Chief Executive', 'quality_representative' => 'Quality Management Representative'] as $key => $role) {
+            foreach ($data[$key] ?? [] as $row) {
+                if (! array_filter($row)) {
+                    continue;
+                }
+                DB::table('cb_staff_roles')->insert($this->timestamps(array_merge($row, [
+                    'application_id' => $application->id,
+                    'role' => $role,
+                ])));
+            }
+        }
+        $this->replaceRows('cb_management_members', $application->id, $data['management_members'] ?? []);
+        $this->replaceRows('cb_permanent_auditors', $application->id, $data['permanent_auditors'] ?? []);
+        $this->replaceRows('cb_freelance_auditors', $application->id, $data['freelance_auditors'] ?? []);
+
+        return $this->cbSectionResponse($request, 'Staff information saved.', 'staff_info');
+    }
+
+    private function saveCbScopeApplication(Request $request, CbApplication $application)
+    {
+        $data = $request->validate([
+            'qms_scopes' => 'nullable|array',
+            'ems_scopes' => 'nullable|array',
+            'ohs_scopes' => 'nullable|array',
+            'fsms_scopes' => 'nullable|array',
+            'mdqms_scopes' => 'nullable|array',
+            'isms_scopes' => 'nullable|array',
+        ]);
+
+        foreach ([
+            'qms_scopes' => 'cb_qms_scopes',
+            'ems_scopes' => 'cb_ems_scopes',
+            'ohs_scopes' => 'cb_ohs_scopes',
+            'fsms_scopes' => 'cb_fsms_scopes',
+            'mdqms_scopes' => 'cb_mdqms_scopes',
+            'isms_scopes' => 'cb_isms_scopes',
+        ] as $key => $table) {
+            $this->replaceRows($table, $application->id, $data[$key] ?? []);
+        }
+
+        return $this->cbSectionResponse($request, 'Scope of application saved.', 'scope_application');
+    }
+
+    private function saveCbQualitySystem(Request $request, CbApplication $application)
+    {
+        $data = $request->validate([
+            'complies' => 'required|in:yes,no',
+            'non_compliance' => 'nullable|array',
+        ]);
+        // dd($request->all());
+
+        $rows = $data['complies'] === 'no' ? ($data['non_compliance'] ?? []) : [['complies' => 'yes']];
+
+        $rows = array_map(fn ($row) => array_merge(['complies' => $data['complies']], $row), $rows);
+
+        $this->replaceRows('cb_non_compliance', $application->id, $rows);
+
+        return $this->cbSectionResponse($request, 'Quality system compliance saved.', 'quality_system');
+    }
+
+    private function saveCbOtherApprovals(Request $request, CbApplication $application)
+    {
+        $data = $request->validate(['other_approvals' => 'nullable|array']);
+        $this->replaceRows('cb_other_approvals', $application->id, $data['other_approvals'] ?? []);
+
+        return $this->cbSectionResponse($request, 'Other approvals saved.', 'other_approvals');
+    }
+
+    private function saveCbDeclaration(Request $request, CbApplication $application)
+    {
+        $data = $request->validate([
+            'declaration_accepted' => 'required|accepted',
+            'applicant_fee_amount' => 'required|string|max:100',
+            'digital_signature_name' => 'required|string|max:255',
+            'signed_date' => 'required|date',
+            'final_submit' => 'nullable|in:1',
+        ]);
+
+        DB::table('cb_declarations')->updateOrInsert(
+            ['application_id' => $application->id],
+            $this->timestamps([
+                'declaration_accepted' => true,
+                'applicant_fee_amount' => $data['applicant_fee_amount'],
+                'digital_signature_name' => $data['digital_signature_name'],
+                'signed_date' => $data['signed_date'],
+            ])
+        );
+
+        if (! empty($data['final_submit'])) {
+            $this->validateCbFinalSubmission($application);
+            $application->update([
+                'status' => 'Submitted',
+                'submitted_at' => now(),
+                'application_no' => $application->application_no ?: 'CB-'.now()->format('Ymd').'-'.$application->id,
+            ]);
+        }
+
+        return $this->cbSectionResponse($request, ! empty($data['final_submit']) ? 'Application submitted successfully.' : 'Declaration saved.', 'declaration');
+    }
+
+    private function validateCbFinalSubmission(CbApplication $application): void
+    {
+        $requiredDocuments = [
+            'Quality Manual',
+            'Quality Procedures',
+            'Staff List',
+            'Certified Organizations List',
+            'Applicant Fee Evidence',
+            'Legal Entity Proof',
+            'F-02/29 Form',
+        ];
+
+        $uploaded = DB::table('cb_documents')->where('application_id', $application->id)->pluck('document_type')->all();
+        $missingDocuments = array_diff($requiredDocuments, $uploaded);
+
+        $requiredTables = [
+            'cb_contacts' => 'Certification Body Information',
+            'cb_requested_scopes' => 'Accreditation Request',
+            'cb_authorized_persons' => 'About Yourselves',
+            'cb_staff_roles' => 'Staff Information',
+            'cb_declarations' => 'Declaration',
+        ];
+
+        $missing = [];
+        foreach ($requiredTables as $table => $label) {
+            if (! DB::table($table)->where('application_id', $application->id)->exists()) {
+                $missing[] = $label;
+            }
+        }
+
+        if ($missingDocuments || $missing) {
+            abort(422, 'Complete missing sections/documents before submission: '.implode(', ', array_merge($missing, $missingDocuments)));
+        }
+    }
+
+    private function replaceRows(string $table, int $applicationId, array $rows): void
+    {
+        DB::table($table)->where('application_id', $applicationId)->delete();
+
+        foreach ($rows as $row) {
+            $row = array_filter($row, fn ($value) => $value !== null && $value !== '');
+            if (! $row) {
+                continue;
+            }
+            DB::table($table)->insert($this->timestamps(array_merge($row, ['application_id' => $applicationId])));
+
+        }
+    }
+
+    private function timestamps(array $data): array
+    {
+        return array_merge($data, ['created_at' => now(), 'updated_at' => now()]);
+    }
+
+    private function cbSectionResponse(Request $request, string $message, string $section)
+    {
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'open_section' => $section,
+            ]);
+        }
+
+        return back()->with('success', $message)->with('open_section', $section);
+    }
+
     public function documentStore(Request $request)
     {
         // dd($request->all());
