@@ -13,39 +13,34 @@ return new class extends Migration
     {
         Schema::create('application_for_labs', function (Blueprint $table) {
             $table->id();
-            $table->string('organisation')->nullable();
-            $table->string('cab_name')->nullable();
-            $table->string('address_laboratory')->nullable();
-            $table->string('postcode')->nullable();
-            $table->string('tel')->nullable();
-            $table->string('fax')->nullable();
-            $table->string('ntn_ftn')->nullable();
-            $table->string('website')->nullable();
-            $table->string('city')->nullable();
-            $table->string('country')->nullable();
-            $table->string('contact_name')->nullable();
-            $table->string('designation')->nullable();
-            $table->string('person_address')->nullable();
-            $table->string('person_postcode')->nullable();
-            $table->string('person_tel')->nullable();
-            $table->string('person_fax')->nullable();
-            $table->string('person_email')->nullable();
-            $table->string('chack_calibration')->nullable();
-            $table->string('chack_laboratory')->nullable();
-            $table->string('chack_extension')->nullable();
-            $table->string('chack_permanent')->nullable();
-            $table->string('chack_mobile')->nullable();
-            $table->string('chack_renewal')->nullable();
-            $table->string('chack_quality')->nullable();
-            $table->string('chack_participation')->nullable();
-            $table->string('chack_plan')->nullable();
-            $table->string('chack_agreement')->nullable();
-            $table->string('chack_filled')->nullable();
-            $table->string('chack_staff')->nullable();
-            $table->string('chack_applicant')->nullable();
+            $table->unsignedBigInteger('certification_general_id')->nullable();
+            // Basic / contact
+            // $table->string('organisation')->nullable();
+            // $table->string('fax')->nullable();
+            // $table->string('contact_name')->nullable();
+            // $table->string('designation')->nullable();
+            // $table->string('person_address')->nullable();
+            // $table->string('person_postcode')->nullable();
+            // $table->string('person_tel')->nullable();
+            // $table->string('person_fax')->nullable();
 
-            // About your selves
-            $table->text('about')->nullable();
+            // // Checkboxes / declarations
+            // $table->string('chack_calibration')->nullable();
+            // $table->string('chack_laboratory')->nullable();
+            // $table->string('chack_extension')->nullable();
+            // $table->string('chack_permanent')->nullable();
+            // $table->string('chack_mobile')->nullable();
+            // $table->string('chack_renewal')->nullable();
+            // $table->string('chack_quality')->nullable();
+            // $table->string('chack_participation')->nullable();
+            // $table->string('chack_plan')->nullable();
+            // $table->string('chack_agreement')->nullable();
+            // $table->string('chack_filled')->nullable();
+            // $table->string('chack_staff')->nullable();
+            // $table->string('chack_applicant')->nullable();
+
+            // // About yourselves
+            // $table->text('about')->nullable();
             $table->text('selves_title')->nullable();
             $table->text('selves_name')->nullable();
             $table->text('selves_position')->nullable();
@@ -57,11 +52,11 @@ return new class extends Migration
             $table->text('selves_postcode')->nullable();
             $table->text('selves_tel')->nullable();
             $table->text('selves_fax')->nullable();
-            $table->text('selves_organization_three')->nullable();
-            $table->text('selves_address_three')->nullable();
-            $table->text('selves_postcode_three')->nullable();
-            $table->text('selves_tel_three')->nullable();
-            $table->text('selves_fax_three')->nullable();
+            // $table->text('selves_organization_three')->nullable();
+            // $table->text('selves_address_three')->nullable();
+            // $table->text('selves_postcode_three')->nullable();
+            // $table->text('selves_tel_three')->nullable();
+            // $table->text('selves_fax_three')->nullable();
             $table->text('selves_individual')->nullable();
             $table->text('selves_public')->nullable();
             $table->text('selves_private')->nullable();
@@ -80,7 +75,7 @@ return new class extends Migration
             $table->text('selves_fax_seven')->nullable();
             $table->text('selves_email_seven')->nullable();
 
-            // About Your Staff
+            // About your staff
             $table->text('staff_name')->nullable();
             $table->text('staff_qualifications')->nullable();
             $table->text('staff_relevant')->nullable();
@@ -105,12 +100,11 @@ return new class extends Migration
             $table->text('scop_working')->nullable();
             $table->text('scop_limit')->nullable();
 
-            // scope of calibration
+            // Scope of calibration
             $table->text('scop_calib_measurement')->nullable();
             $table->text('scop_calib_range')->nullable();
             $table->text('scop_calib_expanded')->nullable();
             $table->text('scop_calib_technique')->nullable();
-
 
             // Calibration Facility
             $table->string('calibration_fully')->nullable();
@@ -131,13 +125,13 @@ return new class extends Migration
             $table->string('calibration_compliance')->nullable();
             $table->string('calibration_rectified')->nullable();
 
-            // Other Approvales
+            // Other approvals
             $table->string('approvals_name')->nullable();
             $table->string('approvals_scope')->nullable();
             $table->date('approvals_start_date')->nullable();
             $table->date('approvals_end_date')->nullable();
 
-            // Decelaration
+            // Declaration
             $table->string('declaration_calibration')->nullable();
             $table->string('declaration_testing')->nullable();
             $table->string('declaration_extension')->nullable();
@@ -147,8 +141,12 @@ return new class extends Migration
             $table->date('date')->nullable();
             $table->text('category')->nullable();
 
-            $table->unsignedBigInteger('user_id')->nullable();
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('certification_general_id')
+                ->references('id')
+                ->on('certification_generals')
+                ->onDelete('cascade');
+
+            $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
 
             $table->timestamps();
         });
