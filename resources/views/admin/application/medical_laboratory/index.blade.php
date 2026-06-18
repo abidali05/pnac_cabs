@@ -308,7 +308,7 @@
                 <h4 class="mb-0 text-success">Medical Laboratory Accreditation (ISO 15189)</h4>
                 <div class="d-flex align-items-center gap-2">
                     <span class="badge bg-success">{{ $mlabApplication->status }}</span>
-                    <span class="badge bg-light text-dark">{{ $mlabApplication->application_no ?: 'Draft' }}</span>
+                    {{-- <span class="badge bg-light text-dark">{{ $mlabApplication->application_no ?: 'Draft' }}</span> --}}
                 </div>
             </div>
 

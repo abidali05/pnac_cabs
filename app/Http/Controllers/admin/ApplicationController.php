@@ -5,6 +5,7 @@ namespace App\Http\Controllers\admin;
 use App\Factories\ScopeFactory;
 use App\Factories\ScopeFetcher;
 use App\Http\Controllers\CertificationBodies\InspectionBodyController;
+use App\Http\Controllers\HalalCertification\HalalCertificationBodyController;
 use App\Http\Controllers\Controller;
 use App\Models\ApplicationForLab;
 use App\Models\CalibrationScope;
@@ -323,6 +324,10 @@ class ApplicationController extends Controller
 
             $cbData = $this->loadCbApplicationData($cbApplication);
         }
+        if ($scheme_name === 'Halal Certification Bodies') {
+            return app(HalalCertificationBodyController::class)->create($request);
+        }
+
         if ($scheme_name === 'Inspection Bodies') {
             return app(InspectionBodyController::class)->create($request);
         }

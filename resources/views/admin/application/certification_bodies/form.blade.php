@@ -131,7 +131,7 @@
         <h4 class="mb-0 text-success">Certification Bodies Accreditation Application</h4>
         <div class="d-flex align-items-center gap-2">
             <span class="badge bg-success">{{ $cbApplication->status }}</span>
-            <span class="badge bg-light text-dark">{{ $cbApplication->application_no ?: 'Draft' }}</span>
+            {{-- <span class="badge bg-light text-dark">{{ $cbApplication->application_no ?: 'Draft' }}</span> --}}
         </div>
     </div>
 
