@@ -378,6 +378,7 @@
             @endif
         </div>
         @php
+            $schemeName = urldecode(request()->query('scheme_name', ''));
             $cards = [
                 'about_staff' => [
                     'title' => 'Step 2: About Your Staff',

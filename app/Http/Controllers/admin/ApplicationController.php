@@ -4,12 +4,15 @@ namespace App\Http\Controllers\admin;
 
 use App\Factories\ScopeFactory;
 use App\Factories\ScopeFetcher;
+use App\Http\Controllers\CertificationBodies\InspectionBodyController;
 use App\Http\Controllers\Controller;
 use App\Models\ApplicationForLab;
 use App\Models\CalibrationScope;
 use App\Models\Category22000;
 use App\Models\CbApplication;
 use App\Models\CertificationBody;
+use App\Models\CertificationBodyApproval;
+use App\Models\CertificationBodyStaff;
 use App\Models\CertificationDeclaration;
 use App\Models\CertificationEmployee;
 use App\Models\CertificationGeneral;
@@ -26,7 +29,6 @@ use App\Models\InspectionScope;
 use App\Models\MainTechnical13485;
 use App\Models\MedicalLaboratory;
 use App\Models\MedicalScope;
-use App\Http\Controllers\CertificationBodies\InspectionBodyController;
 use App\Models\MlabApplication;
 use App\Models\PersonnelCertification;
 use App\Models\PersonnelScope;
@@ -39,6 +41,7 @@ use App\Models\SubCategory22000;
 use App\Models\TechnicalArea;
 use App\Models\TechnicalCluster;
 use App\Models\TestingScope;
+use App\Services\CertificationBodiesApplicationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -48,6 +51,7 @@ use Illuminate\Support\Str;
 
 class ApplicationController extends Controller
 {
+    public function __construct(private readonly CertificationBodiesApplicationService $certificationBodiesService) {}
     // public function __construct()
     // {
     //     // $this->middleware('permission:view application')->only(['applicationIndex']);
@@ -93,13 +97,21 @@ class ApplicationController extends Controller
 
         foreach ($models as $model) {
             $mergedApplications = $mergedApplications->merge(
-                $model::where('user_id', $user->id)->get()->map(function ($item) {
+                $model::where('user_id', $user->id)->get()->map(function ($item) use ($model, $user) {
+                    $general = null;
+                    if ($model === ApplicationForLab::class) {
+                        $general = CertificationGeneral::where('user_id', $user->id)
+                            ->where('category', $item->category)
+                            ->latest('id')
+                            ->first();
+                    }
+
                     return [
                         'id' => $item->id,
                         'contact_name' => $item->contact_name,
-                        'person_email' => $item->person_email,
+                        'person_email' => $general->email ?? $item->person_email ?? '',
                         'organisation' => $item->organisation ?? '',
-                        'address' => $item->address_laboratory ?? '',
+                        'address' => $general->address ?? $item->address_laboratory ?? '',
                         'category' => $item->category ?? '',
                     ];
                 })
@@ -231,7 +243,56 @@ class ApplicationController extends Controller
         $scheme_name = $request->scheme_name;
         $application = $request->application;
         $applicationId = session('application_id');
-        $general = CertificationGeneral::where('user_id', auth()->user()->id)->where('category', $scheme_name)->where('application', $request->application)->first();
+        $general = null;
+        if ($scheme_name === 'Certification Bodies' && session('application_id')) {
+            $general = CertificationGeneral::where('id', session('application_id'))
+                ->where('user_id', auth()->id())
+                ->first();
+        }
+        if (! $general) {
+            $general = CertificationGeneral::where('user_id', auth()->user()->id)
+                ->where('category', $scheme_name)
+                ->where('application', $request->application)
+                ->latest('id')
+                ->first();
+        }
+
+        // Keep Certification Bodies UX aligned with testing flow:
+        // initialize a draft general record so all sections are immediately available.
+        if ($scheme_name === 'Certification Bodies' && ! $general) {
+            $general = CertificationGeneral::create([
+                'user_id' => auth()->id(),
+                'category' => 'Certification Bodies',
+                'application' => $request->application,
+                'scheme' => 'Certification Bodies',
+                'cab_name' => '',
+                'address' => '',
+                'telephone' => '',
+                'email' => 'draft+'.auth()->id().'@example.com',
+                'ntn_ftn' => '',
+                'website' => '',
+                'city' => '',
+                'country' => '',
+                'postal_code' => '',
+                'reference_no' => 'CAB-'.now()->format('Ymd').rand(1000, 9999),
+            ]);
+            session(['application_id' => $general->id]);
+        } elseif ($scheme_name === 'Certification Bodies' && $general) {
+            session(['application_id' => $general->id]);
+        }
+        $cbApplication = $general?->certificationBodyApplication;
+        $cbStaff = $general ? CertificationBodyStaff::where('certification_general_id', $general->id)->orderBy('sort_order')->get()->groupBy('staff_type') : collect();
+        $cbApprovals = $general ? CertificationBodyApproval::where('certification_general_id', $general->id)->get() : collect();
+        $cbScopes = $general ? CertificationScope::where('certification_general_id', $general->id)->where('category', 'Certification Bodies')->get()->groupBy('scope_type') : collect();
+        $cbSavedSections = [
+            'basic_info' => ! empty($general?->cab_name) || ! empty($general?->email),
+            'about_yourselves' => ! empty($cbApplication?->director_name) || ! empty($cbApplication?->director_position),
+            'staff' => $cbStaff->flatten()->isNotEmpty(),
+            'scope' => $cbScopes->flatten()->isNotEmpty(),
+            'quality_system' => ! empty($cbApplication?->quality_system_complies) || ! empty($cbApplication?->non_compliance_area),
+            'approvals' => $cbApprovals->isNotEmpty(),
+            'declaration' => ! empty($cbApplication?->signed) || ! empty($cbApplication?->signed_date),
+        ];
         $isSubmitted = optional(@$general->declaration)->status === 'submited';
         $applicationId = session('application_id');
 
@@ -296,11 +357,13 @@ class ApplicationController extends Controller
                 'user_id' => auth()->id(),
                 'category' => $scheme_name,
             ],
-            []
+            [
+                'certification_general_id' => $general?->id,
+            ]
         );
 
         $savedSections = [
-            'basic_info' => ! empty($labApplication->organisation) || ! empty($labApplication->person_email),
+            'basic_info' => ! empty($general?->cab_name) || ! empty($general?->email),
             'about_yourself' => ! empty($labApplication->selves_name) || ! empty($labApplication->selves_parent_organization),
             'about_staff' => ! empty($labApplication->staff_name) || ! empty($labApplication->staff_quality_name),
             'calibration_scope' => ! empty($labApplication->scop_calib_field) && $labApplication->scop_calib_field !== '[]',
@@ -368,26 +431,52 @@ class ApplicationController extends Controller
     public function saveBasicInfo(Request $request, ApplicationForLab $applicationForLab)
     {
         $validator = Validator::make($request->all(), [
-            'organisation' => 'required|string|max:255',
+            'scheme' => 'required|string|max:255',
             'cab_name' => 'required|string|max:255',
-            'address_laboratory' => 'required|string|max:1000',
-            'tel' => ['required', 'string', 'min:7', 'max:30', 'regex:/^[0-9+\-\s]+$/'],
-            'person_email' => 'required|email|max:255',
+            'address' => 'required|string|max:1000',
+            'telephone' => ['required', 'string', 'min:7', 'max:30', 'regex:/^[0-9+\-\s]+$/'],
+            'email' => 'required|email|max:255',
             'ntn_ftn' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9\-\/]+$/'],
             'website' => 'required|url|max:255',
             'city' => 'required|string|max:255',
             'country' => 'required|string|max:255',
-            'postcode' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9\s\-]+$/'],
+            'postal_code' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9\s\-]+$/'],
         ]);
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput()->with('open_section', 'basic_info');
         }
 
-        $applicationForLab->update(array_merge(
-            $validator->validated(),
-            ['user_id' => auth()->id(), 'category' => urldecode($request->query('scheme_name', $applicationForLab->category))]
-        ));
+        $validated = $validator->validated();
+
+        $general = CertificationGeneral::firstOrNew([
+            'user_id' => auth()->id(),
+            'category' => urldecode($request->query('scheme_name', $applicationForLab->category)),
+            'application' => $request->query('application'),
+        ]);
+
+        $general->fill([
+            'scheme' => $validated['scheme'],
+            'cab_name' => $validated['cab_name'],
+            'address' => $validated['address'],
+            'telephone' => $validated['telephone'],
+            'email' => $validated['email'],
+            'ntn_ftn' => $validated['ntn_ftn'],
+            'website' => $validated['website'],
+            'city' => $validated['city'],
+            'country' => $validated['country'],
+            'postal_code' => $validated['postal_code'],
+        ]);
+
+        if (empty($general->reference_no)) {
+            $general->reference_no = 'CAB-'.now()->format('Ymd').rand(1000, 9999);
+        }
+
+        $general->save();
+
+        $applicationForLab->update([
+            'certification_general_id' => $general->id,
+        ]);
 
         return redirect()->route('application.create', [
             'scheme_name' => $request->query('scheme_name'),
@@ -2225,5 +2314,21 @@ class ApplicationController extends Controller
         $subcategories = SubCategory22000::where('category_id', $request->category_id)->get();
 
         return response()->json($subcategories);
+    }
+
+    public function applicationShow($id, $category)
+    {
+        if ($category !== 'Certification Bodies') {
+            return view('admin.error.404');
+        }
+
+        $application = CertificationGeneral::with([
+            'certificationBodyApplication',
+            'certificationBodyStaff',
+            'certificationBodyApprovals',
+            'certificationScopes',
+        ])->findOrFail($id);
+
+        return view('admin.application.certification.show.certification_bodies_show', compact('application'));
     }
 }

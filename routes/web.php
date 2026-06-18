@@ -96,6 +96,13 @@ Route::middleware('auth')->group(function () {
             // Route::post('medical-laboratory/{mlabApplication}/documents', 'uploadMedicalLaboratoryDocument')->name('medical-laboratory.documents.store');
             // Route::delete('medical-laboratory/{mlabApplication}/documents/{document}', 'deleteMedicalLaboratoryDocument')->name('medical-laboratory.documents.destroy');
             Route::get('view-scope', 'viewScope')->name('view.scope');
+            Route::post('certification-bodies/basic-info', 'saveCertificationBodiesBasicInfo')->name('certificationBodies.saveBasicInfo');
+            Route::post('certification-bodies/about-yourselves/{general}', 'saveCertificationBodiesAboutYourselves')->name('certificationBodies.saveAboutYourselves');
+            Route::post('certification-bodies/staff/{general}', 'saveCertificationBodiesStaff')->name('certificationBodies.saveStaff');
+            Route::post('certification-bodies/scope/{general}', 'saveCertificationBodiesScope')->name('certificationBodies.saveScope');
+            Route::post('certification-bodies/quality-system/{general}', 'saveCertificationBodiesQualitySystem')->name('certificationBodies.saveQualitySystem');
+            Route::post('certification-bodies/approvals/{general}', 'saveCertificationBodiesApprovals')->name('certificationBodies.saveApprovals');
+            Route::post('certification-bodies/declaration/{general}', 'saveCertificationBodiesDeclaration')->name('certificationBodies.saveDeclaration');
 
             Route::get('submited-application', 'submitedApplication')->name('submited.index');
             Route::get('view/submited-application/{id}', 'viewSubmitedApplication')->name('submited.view');

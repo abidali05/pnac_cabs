@@ -29,9 +29,29 @@ class CertificationGeneral extends Model
     {
         return $this->hasOne(CertificationDeclaration::class, 'certification_general_id');
     }
-   public function application_statuses()
+
+    public function application_statuses()
     {
         return $this->hasOne(ApplicationStatus::class, 'certification_general_id');
     }
 
+    public function certificationBodyApplication()
+    {
+        return $this->hasOne(CertificationBodyApplication::class, 'certification_general_id');
+    }
+
+    public function certificationBodyStaff()
+    {
+        return $this->hasMany(CertificationBodyStaff::class, 'certification_general_id');
+    }
+
+    public function certificationBodyApprovals()
+    {
+        return $this->hasMany(CertificationBodyApproval::class, 'certification_general_id');
+    }
+
+    public function certificationScopes()
+    {
+        return $this->hasMany(CertificationScope::class, 'certification_general_id');
+    }
 }
