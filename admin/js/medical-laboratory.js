@@ -35,6 +35,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // ── Add row (event delegation) ────────────────────────────────────────────
     document.addEventListener("click", function (event) {
         const addButton = event.target.closest(".js-add-row");
+
         if (!addButton) return;
 
         const tbody = document.getElementById(addButton.dataset.target);

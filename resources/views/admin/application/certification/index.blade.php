@@ -2145,6 +2145,18 @@
                 });
             }
         });
+
+        // Recalculate open section height after render
+        setTimeout(function() {
+            cards.forEach(function(card) {
+                const collapseBody = card.querySelector('.pnac-collapse-body');
+                if (!collapseBody || hasBootstrapCollapse) return;
+                const hdr = card.querySelector('.pnac-collapsible-header');
+                if (hdr && hdr.getAttribute('aria-expanded') === 'true') {
+                    collapseBody.style.maxHeight = collapseBody.scrollHeight + 'px';
+                }
+            });
+        }, 100);
     });
 </script>
 <script>

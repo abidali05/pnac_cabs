@@ -141,6 +141,11 @@
 
         .pnac-collapse-body {
             overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .pnac-collapse-body.pnac-is-open {
+            overflow: visible;
         }
 
         .details-grid {
@@ -683,6 +688,7 @@
                                     'signature' => 'Signature',
                                 ],
                                 'isLocked' => $isLocked,
+                                'allowAdd' => false,
                             ])
                             @include('admin.application.medical_laboratory._repeatable_table', [
                                 'title' => 'Laboratory Staff',
@@ -1287,7 +1293,8 @@
                     if (hasBootstrapCollapse) {
                         body.classList.add('show');
                     } else {
-                        body.style.maxHeight = body.scrollHeight + 'px';
+                        body.style.maxHeight = '9999px';
+                        body.classList.add('pnac-is-open');
                     }
                 } else {
                     header.setAttribute('aria-expanded', 'false');
@@ -1310,8 +1317,11 @@
                         const isExpanded = header.getAttribute('aria-expanded') === 'true';
                         if (isExpanded) {
                             body.style.maxHeight = '0px';
+                            body.classList.remove('pnac-is-open');
                         } else {
-                            body.style.maxHeight = body.scrollHeight + 'px';
+                            // Use a large value so content is never clipped
+                            body.style.maxHeight = '9999px';
+                            body.classList.add('pnac-is-open');
                         }
                         header.setAttribute('aria-expanded', String(!isExpanded));
                     }
@@ -1334,6 +1344,19 @@
                     });
                 }
             });
+
+            // After all sections are set up, recalculate open section heights
+            // using a small delay to allow images/fonts to load
+            setTimeout(function() {
+                cards.forEach(function(card) {
+                    const collapseBody = card.querySelector('.pnac-collapse-body');
+                    if (!collapseBody || hasBootstrapCollapse) return;
+                    const header = card.querySelector('.pnac-collapsible-header');
+                    if (header && header.getAttribute('aria-expanded') === 'true') {
+                        collapseBody.style.maxHeight = collapseBody.scrollHeight + 'px';
+                    }
+                });
+            }, 100);
         });
     </script>
 
@@ -1432,7 +1455,7 @@
             });
         });
     </script>
+    {{-- <script src="{{ asset('admin/js/medical-laboratory.js') }}"></script> --}}
 
     {{-- Medical Laboratory specific JS (Add/Remove, AJAX, etc.) --}}
-    <script src="{{ asset('js/medical-laboratory.js') }}"></script>
 @endsection

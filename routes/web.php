@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\admin\ApplicationController;
+use App\Http\Controllers\CertificationBodies\InspectionBodyController;
 use App\Http\Controllers\admin\AssessmentController;
 use App\Http\Controllers\admin\ClientSatisficationController;
 use App\Http\Controllers\admin\SchemeController;
@@ -138,6 +139,17 @@ Route::middleware('auth')->group(function () {
         });
         // Scheme
         Route::resource('scheme', SchemeController::class);
+
+        // Inspection Body Accreditation (F-01/10 / ISO/IEC 17020)
+        Route::prefix('inspection-body')->as('inspection-body.')->group(function () {
+            Route::get('create', [InspectionBodyController::class, 'create'])->name('create');
+            Route::post('{application}/step1', [InspectionBodyController::class, 'saveStep1'])->name('step1.save');
+            Route::post('{application}/step2', [InspectionBodyController::class, 'saveStep2'])->name('step2.save');
+            Route::post('{application}/step3', [InspectionBodyController::class, 'saveStep3'])->name('step3.save');
+            Route::post('{application}/step4', [InspectionBodyController::class, 'saveStep4'])->name('step4.save');
+            Route::post('{application}/documents', [InspectionBodyController::class, 'uploadDocument'])->name('documents.store');
+            Route::delete('{application}/documents/{document}', [InspectionBodyController::class, 'deleteDocument'])->name('documents.destroy');
+        });
 
     });
 });

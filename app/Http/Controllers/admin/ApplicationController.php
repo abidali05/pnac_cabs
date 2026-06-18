@@ -26,6 +26,7 @@ use App\Models\InspectionScope;
 use App\Models\MainTechnical13485;
 use App\Models\MedicalLaboratory;
 use App\Models\MedicalScope;
+use App\Http\Controllers\CertificationBodies\InspectionBodyController;
 use App\Models\MlabApplication;
 use App\Models\PersonnelCertification;
 use App\Models\PersonnelScope;
@@ -261,6 +262,10 @@ class ApplicationController extends Controller
 
             $cbData = $this->loadCbApplicationData($cbApplication);
         }
+        if ($scheme_name === 'Inspection Bodies') {
+            return app(InspectionBodyController::class)->create($request);
+        }
+
         if ($scheme_name === 'Medical Laboratories') {
             // Get or create draft application
             $mlabApplication = MlabApplication::firstOrCreate(
