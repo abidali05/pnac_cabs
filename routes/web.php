@@ -90,6 +90,10 @@ Route::middleware('auth')->group(function () {
             Route::post('certification-bodies/{cbApplication}/{section}/save', 'saveCbSection')->name('certification.save-section');
             Route::post('certification-bodies/{cbApplication}/documents', 'uploadCbDocument')->name('certification.documents.store');
             Route::delete('certification-bodies/{cbApplication}/documents/{document}', 'deleteCbDocument')->name('certification.documents.destroy');
+
+            // Route::post('medical-laboratory/{mlabApplication}/{step}/save', 'saveMedicalLaboratoryStep')->name('medical-laboratory.save-step');
+            // Route::post('medical-laboratory/{mlabApplication}/documents', 'uploadMedicalLaboratoryDocument')->name('medical-laboratory.documents.store');
+            // Route::delete('medical-laboratory/{mlabApplication}/documents/{document}', 'deleteMedicalLaboratoryDocument')->name('medical-laboratory.documents.destroy');
             Route::get('view-scope', 'viewScope')->name('view.scope');
 
             Route::get('submited-application', 'submitedApplication')->name('submited.index');
@@ -122,7 +126,16 @@ Route::middleware('auth')->group(function () {
         // Route::post('application/calibration-facility/store', [ApplicationController::class, 'applicationCalibrationFacilityStore'])->name('application.calibrationFacility.store');
         // Route::post('application/other-approvals/store', [ApplicationController::class, 'applicationOtherApprovalsStore'])->name('application.otherapprovals.store');
         // Route::post('application/declaration/store', [ApplicationController::class, 'applicationDeclarationStore'])->name('application.declaration.store');
-
+        Route::prefix('medical-laboratory')->group(function () {
+            Route::post('/save-step1/{mlabApplication}', [ApplicationController::class, 'saveMlabStep1'])->name('mlab.saveStep1');
+            Route::post('/save-step2/{mlabApplication}', [ApplicationController::class, 'saveMlabStep2'])->name('mlab.saveStep2');
+            Route::post('/save-step3/{mlabApplication}', [ApplicationController::class, 'saveMlabStep3'])->name('mlab.saveStep3');
+            Route::post('/save-step4/{mlabApplication}', [ApplicationController::class, 'saveMlabStep4'])->name('mlab.saveStep4');
+            Route::post('/save-step5/{mlabApplication}', [ApplicationController::class, 'saveMlabStep5'])->name('mlab.saveStep5');
+            Route::post('/save-step6/{mlabApplication}', [ApplicationController::class, 'saveMlabStep6'])->name('mlab.saveStep6');
+            Route::post('/upload-document/{mlabApplication}', [ApplicationController::class, 'uploadMlabDocument'])->name('mlab.uploadDocument');
+            Route::delete('/delete-document/{mlabApplication}/{document}', [ApplicationController::class, 'deleteMlabDocument'])->name('mlab.deleteDocument');
+        });
         // Scheme
         Route::resource('scheme', SchemeController::class);
 
