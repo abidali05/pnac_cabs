@@ -155,7 +155,7 @@
                                 @error('postcode')
                                     {{ $message }}
                                 @enderror
-                            </small></div>y
+                            </small></div>
                     </div>
                     <div class="d-flex justify-content-end mt-3"><button type="submit"
                             class="btn btn-success btn-sm">Save Basic Info</button></div>
@@ -378,6 +378,7 @@
             @endif
         </div>
         @php
+            $schemeName = urldecode(request()->query('scheme_name', ''));
             $cards = [
                 'about_staff' => [
                     'title' => 'Step 2: About Your Staff',

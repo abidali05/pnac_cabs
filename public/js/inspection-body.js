@@ -18,7 +18,9 @@ document.addEventListener("DOMContentLoaded", function () {
     function clearFields(fields) {
         fields.forEach(function (f) {
             if (f.tagName === "SELECT" && f.multiple) {
-                Array.from(f.options).forEach(function (o) { o.selected = false; });
+                Array.from(f.options).forEach(function (o) {
+                    o.selected = false;
+                });
             } else if (f.type === "checkbox" || f.type === "radio") {
                 f.checked = false;
             } else {
@@ -27,9 +29,9 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // ── Add row — event delegation (works on collapsed/hidden sections) ────────
-    document.addEventListener("click", function (event) {
-        var btn = event.target.closest(".js-add-row");
+    // ── Add row (event delegation) ────────────────────────────────────────────
+    document.addEventListener("click", function (e) {
+        var btn = e.target.closest(".js-add-row");
         if (!btn) return;
 
         var tbody = document.getElementById(btn.dataset.target);
@@ -54,9 +56,9 @@ document.addEventListener("DOMContentLoaded", function () {
         recalcCollapseAncestors(tbody);
     });
 
-    // ── Remove row — event delegation ─────────────────────────────────────────
-    document.addEventListener("click", function (event) {
-        var btn = event.target.closest(".js-remove-row");
+    // ── Remove row (event delegation) ─────────────────────────────────────────
+    document.addEventListener("click", function (e) {
+        var btn   = e.target.closest(".js-remove-row");
         if (!btn) return;
 
         var row   = btn.closest("tr");
@@ -83,55 +85,14 @@ document.addEventListener("DOMContentLoaded", function () {
         recalcCollapseAncestors(tbody);
     });
 
-    // ── Toggle helpers ────────────────────────────────────────────────────────
-
-    function toggleOther() {
-        var el = document.querySelector('.cb-other-toggle[value="Other"]');
-        var checked = el && el.checked;
-        document.querySelectorAll(".cb-other-wrap").forEach(function (w) {
-            w.classList.toggle("d-none", !checked);
-        });
-    }
-
-    function toggleOwnership() {
-        var sel = document.querySelector(".cb-ownership-select");
-        var show = sel && sel.value === "Other";
-        document.querySelectorAll(".cb-ownership-other").forEach(function (w) {
-            w.classList.toggle("d-none", !show);
-        });
-    }
-
-    function toggleActivity() {
-        var sel = document.querySelector(".cb-main-activity-select");
-        var show = sel && sel.value === "no";
-        document.querySelectorAll(".cb-main-activity-description").forEach(function (w) {
-            w.classList.toggle("d-none", !show);
-        });
-    }
-
-    function toggleQuality() {
-        var el = document.querySelector(".cb-quality-toggle:checked");
-        var isNo = el && el.value === "no";
-        document.querySelectorAll(".cb-non-compliance-wrap").forEach(function (w) {
-            w.classList.toggle("d-none", !isNo);
-        });
-    }
-
-    document.addEventListener("change", function (event) {
-        if (event.target.classList.contains("cb-other-toggle"))        toggleOther();
-        if (event.target.classList.contains("cb-ownership-select"))    toggleOwnership();
-        if (event.target.classList.contains("cb-main-activity-select")) toggleActivity();
-        if (event.target.classList.contains("cb-quality-toggle"))      toggleQuality();
-    });
-
     // ── AJAX form submission ──────────────────────────────────────────────────
-    document.querySelectorAll(".cb-js-card-form").forEach(function (form) {
-        form.addEventListener("submit", function (event) {
-            event.preventDefault();
+    document.querySelectorAll(".ib-js-card-form").forEach(function (form) {
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
 
-            var submitter     = event.submitter;
-            var isFinalSubmit = submitter && submitter.name === "final_submit";
-            var formData      = new FormData(form);
+            var submitter      = e.submitter;
+            var isFinalSubmit  = submitter && submitter.name === "final_submit";
+            var formData       = new FormData(form);
 
             if (submitter && submitter.name) {
                 formData.set(submitter.name, submitter.value || "1");
@@ -160,6 +121,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         return;
                     }
 
+                    // After final submit redirect to the view provided by the server
                     if (isFinalSubmit && data.redirect_url) {
                         window.location.href = data.redirect_url;
                         return;
@@ -171,19 +133,13 @@ document.addEventListener("DOMContentLoaded", function () {
                         "open_section",
                         data.open_section ||
                             (form.closest("[data-section]") && form.closest("[data-section]").dataset.section) ||
-                            "basic_info"
+                            "step1"
                     );
-                    window.location.href = url.toString();
+                    window.location.replace(url.toString());
                 })
                 .catch(function () {
                     alert("Unable to save this section. Please try again.");
                 });
         });
     });
-
-    // Run toggles on load so initial state is correct
-    toggleOther();
-    toggleOwnership();
-    toggleActivity();
-    toggleQuality();
 });

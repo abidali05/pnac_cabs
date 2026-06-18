@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\admin\ApplicationController;
+use App\Http\Controllers\CertificationBodies\InspectionBodyController;
 use App\Http\Controllers\admin\AssessmentController;
 use App\Http\Controllers\admin\ClientSatisficationController;
 use App\Http\Controllers\admin\SchemeController;
@@ -90,7 +91,18 @@ Route::middleware('auth')->group(function () {
             Route::post('certification-bodies/{cbApplication}/{section}/save', 'saveCbSection')->name('certification.save-section');
             Route::post('certification-bodies/{cbApplication}/documents', 'uploadCbDocument')->name('certification.documents.store');
             Route::delete('certification-bodies/{cbApplication}/documents/{document}', 'deleteCbDocument')->name('certification.documents.destroy');
+
+            // Route::post('medical-laboratory/{mlabApplication}/{step}/save', 'saveMedicalLaboratoryStep')->name('medical-laboratory.save-step');
+            // Route::post('medical-laboratory/{mlabApplication}/documents', 'uploadMedicalLaboratoryDocument')->name('medical-laboratory.documents.store');
+            // Route::delete('medical-laboratory/{mlabApplication}/documents/{document}', 'deleteMedicalLaboratoryDocument')->name('medical-laboratory.documents.destroy');
             Route::get('view-scope', 'viewScope')->name('view.scope');
+            Route::post('certification-bodies/basic-info', 'saveCertificationBodiesBasicInfo')->name('certificationBodies.saveBasicInfo');
+            Route::post('certification-bodies/about-yourselves/{general}', 'saveCertificationBodiesAboutYourselves')->name('certificationBodies.saveAboutYourselves');
+            Route::post('certification-bodies/staff/{general}', 'saveCertificationBodiesStaff')->name('certificationBodies.saveStaff');
+            Route::post('certification-bodies/scope/{general}', 'saveCertificationBodiesScope')->name('certificationBodies.saveScope');
+            Route::post('certification-bodies/quality-system/{general}', 'saveCertificationBodiesQualitySystem')->name('certificationBodies.saveQualitySystem');
+            Route::post('certification-bodies/approvals/{general}', 'saveCertificationBodiesApprovals')->name('certificationBodies.saveApprovals');
+            Route::post('certification-bodies/declaration/{general}', 'saveCertificationBodiesDeclaration')->name('certificationBodies.saveDeclaration');
 
             Route::get('submited-application', 'submitedApplication')->name('submited.index');
             Route::get('view/submited-application/{id}', 'viewSubmitedApplication')->name('submited.view');
@@ -122,9 +134,29 @@ Route::middleware('auth')->group(function () {
         // Route::post('application/calibration-facility/store', [ApplicationController::class, 'applicationCalibrationFacilityStore'])->name('application.calibrationFacility.store');
         // Route::post('application/other-approvals/store', [ApplicationController::class, 'applicationOtherApprovalsStore'])->name('application.otherapprovals.store');
         // Route::post('application/declaration/store', [ApplicationController::class, 'applicationDeclarationStore'])->name('application.declaration.store');
-
+        Route::prefix('medical-laboratory')->group(function () {
+            Route::post('/save-step1/{mlabApplication}', [ApplicationController::class, 'saveMlabStep1'])->name('mlab.saveStep1');
+            Route::post('/save-step2/{mlabApplication}', [ApplicationController::class, 'saveMlabStep2'])->name('mlab.saveStep2');
+            Route::post('/save-step3/{mlabApplication}', [ApplicationController::class, 'saveMlabStep3'])->name('mlab.saveStep3');
+            Route::post('/save-step4/{mlabApplication}', [ApplicationController::class, 'saveMlabStep4'])->name('mlab.saveStep4');
+            Route::post('/save-step5/{mlabApplication}', [ApplicationController::class, 'saveMlabStep5'])->name('mlab.saveStep5');
+            Route::post('/save-step6/{mlabApplication}', [ApplicationController::class, 'saveMlabStep6'])->name('mlab.saveStep6');
+            Route::post('/upload-document/{mlabApplication}', [ApplicationController::class, 'uploadMlabDocument'])->name('mlab.uploadDocument');
+            Route::delete('/delete-document/{mlabApplication}/{document}', [ApplicationController::class, 'deleteMlabDocument'])->name('mlab.deleteDocument');
+        });
         // Scheme
         Route::resource('scheme', SchemeController::class);
+
+        // Inspection Body Accreditation (F-01/10 / ISO/IEC 17020)
+        Route::prefix('inspection-body')->as('inspection-body.')->group(function () {
+            Route::get('create', [InspectionBodyController::class, 'create'])->name('create');
+            Route::post('{application}/step1', [InspectionBodyController::class, 'saveStep1'])->name('step1.save');
+            Route::post('{application}/step2', [InspectionBodyController::class, 'saveStep2'])->name('step2.save');
+            Route::post('{application}/step3', [InspectionBodyController::class, 'saveStep3'])->name('step3.save');
+            Route::post('{application}/step4', [InspectionBodyController::class, 'saveStep4'])->name('step4.save');
+            Route::post('{application}/documents', [InspectionBodyController::class, 'uploadDocument'])->name('documents.store');
+            Route::delete('{application}/documents/{document}', [InspectionBodyController::class, 'deleteDocument'])->name('documents.destroy');
+        });
 
     });
 });
