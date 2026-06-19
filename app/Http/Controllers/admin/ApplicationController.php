@@ -4,12 +4,13 @@ namespace App\Http\Controllers\admin;
 
 use App\Factories\ScopeFactory;
 use App\Factories\ScopeFetcher;
+use App\Http\Controllers\CertificationBodies\InspectionBodyController;
 use App\Http\Controllers\Controller;
 use App\Models\ApplicationForLab;
 use App\Models\CalibrationScope;
 use App\Models\Category22000;
+use App\Models\CbApplication;
 use App\Models\CertificationBody;
-use App\Models\CertificationBodyApplication;
 use App\Models\CertificationBodyApproval;
 use App\Models\CertificationBodyStaff;
 use App\Models\CertificationDeclaration;
@@ -28,6 +29,7 @@ use App\Models\InspectionScope;
 use App\Models\MainTechnical13485;
 use App\Models\MedicalLaboratory;
 use App\Models\MedicalScope;
+use App\Models\MlabApplication;
 use App\Models\PersonnelCertification;
 use App\Models\PersonnelScope;
 use App\Models\ProductCertification;
@@ -45,12 +47,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class ApplicationController extends Controller
 {
-    public function __construct(private readonly CertificationBodiesApplicationService $certificationBodiesService)
-    {
-    }
+    public function __construct(private readonly CertificationBodiesApplicationService $certificationBodiesService) {}
     // public function __construct()
     // {
     //     // $this->middleware('permission:view application')->only(['applicationIndex']);
@@ -248,7 +249,7 @@ class ApplicationController extends Controller
                 ->where('user_id', auth()->id())
                 ->first();
         }
-        if (!$general) {
+        if (! $general) {
             $general = CertificationGeneral::where('user_id', auth()->user()->id)
                 ->where('category', $scheme_name)
                 ->where('application', $request->application)
@@ -258,7 +259,7 @@ class ApplicationController extends Controller
 
         // Keep Certification Bodies UX aligned with testing flow:
         // initialize a draft general record so all sections are immediately available.
-        if ($scheme_name === 'Certification Bodies' && !$general) {
+        if ($scheme_name === 'Certification Bodies' && ! $general) {
             $general = CertificationGeneral::create([
                 'user_id' => auth()->id(),
                 'category' => 'Certification Bodies',
@@ -267,13 +268,13 @@ class ApplicationController extends Controller
                 'cab_name' => '',
                 'address' => '',
                 'telephone' => '',
-                'email' => 'draft+' . auth()->id() . '@example.com',
+                'email' => 'draft+'.auth()->id().'@example.com',
                 'ntn_ftn' => '',
                 'website' => '',
                 'city' => '',
                 'country' => '',
                 'postal_code' => '',
-                'reference_no' => 'CAB-' . now()->format('Ymd') . rand(1000, 9999),
+                'reference_no' => 'CAB-'.now()->format('Ymd').rand(1000, 9999),
             ]);
             session(['application_id' => $general->id]);
         } elseif ($scheme_name === 'Certification Bodies' && $general) {
@@ -284,13 +285,13 @@ class ApplicationController extends Controller
         $cbApprovals = $general ? CertificationBodyApproval::where('certification_general_id', $general->id)->get() : collect();
         $cbScopes = $general ? CertificationScope::where('certification_general_id', $general->id)->where('category', 'Certification Bodies')->get()->groupBy('scope_type') : collect();
         $cbSavedSections = [
-            'basic_info' => !empty($general?->cab_name) || !empty($general?->email),
-            'about_yourselves' => !empty($cbApplication?->director_name) || !empty($cbApplication?->director_position),
+            'basic_info' => ! empty($general?->cab_name) || ! empty($general?->email),
+            'about_yourselves' => ! empty($cbApplication?->director_name) || ! empty($cbApplication?->director_position),
             'staff' => $cbStaff->flatten()->isNotEmpty(),
             'scope' => $cbScopes->flatten()->isNotEmpty(),
-            'quality_system' => !empty($cbApplication?->quality_system_complies) || !empty($cbApplication?->non_compliance_area),
+            'quality_system' => ! empty($cbApplication?->quality_system_complies) || ! empty($cbApplication?->non_compliance_area),
             'approvals' => $cbApprovals->isNotEmpty(),
-            'declaration' => !empty($cbApplication?->signed) || !empty($cbApplication?->signed_date),
+            'declaration' => ! empty($cbApplication?->signed) || ! empty($cbApplication?->signed_date),
         ];
         $isSubmitted = optional(@$general->declaration)->status === 'submited';
         $applicationId = session('application_id');
@@ -305,6 +306,52 @@ class ApplicationController extends Controller
 
         $referenceNumber = 'CAB-'.now()->format('Ymd').rand(1000, 9999); // Example: CAB-20250806-4572
 
+        $cbApplication = null;
+        $cbData = [];
+        if ($scheme_name === 'Certification Bodies') {
+            $cbApplication = CbApplication::firstOrCreate(
+                [
+                    'created_by' => auth()->id(),
+                    'scheme_name' => $scheme_name,
+                    'application_type' => $application ?: 'New Application',
+                    'status' => 'Draft',
+                ],
+                [
+                    'application_no' => $referenceNumber,
+                ]
+            );
+
+            $cbData = $this->loadCbApplicationData($cbApplication);
+        }
+        if ($scheme_name === 'Inspection Bodies') {
+            return app(InspectionBodyController::class)->create($request);
+        }
+
+        if ($scheme_name === 'Medical Laboratories') {
+            // Get or create draft application
+            $mlabApplication = MlabApplication::firstOrCreate(
+                [
+                    'created_by' => auth()->id(),
+                    'scheme_name' => $scheme_name,
+                    'status' => 'draft',
+                ],
+                [
+                    'application_type' => $application ?: 'New Application',
+                    'organisation_name' => '',   // placeholder
+                    'lab_address' => '',         // placeholder
+                ]
+            );
+
+            // Load all related data
+            $mlabData = $this->loadMedicalLaboratoryData($mlabApplication);
+
+            return view('admin.application.medical_laboratory.index', compact(
+                'mlabApplication',
+                'mlabData',
+                'scheme_name',
+                'application'
+            ));
+        }
         $labApplication = ApplicationForLab::updateOrCreate(
             [
                 'user_id' => auth()->id(),
@@ -316,74 +363,69 @@ class ApplicationController extends Controller
         );
 
         $savedSections = [
-            'basic_info' => !empty($general?->cab_name) || !empty($general?->email),
-            'about_yourself' => !empty($labApplication->selves_name) || !empty($labApplication->selves_parent_organization),
-            'about_staff' => !empty($labApplication->staff_name) || !empty($labApplication->staff_quality_name),
-            'calibration_scope' => !empty($labApplication->scop_calib_field) && $labApplication->scop_calib_field !== '[]',
-            'testing_scope' => !empty($labApplication->scop_materials) || !empty($labApplication->scop_description),
-            'calibration_facility' => !empty($labApplication->calibration_fully) || !empty($labApplication->calibration_compliance),
-            'other_approvals' => !empty($labApplication->approvals_name) || !empty($labApplication->approvals_scope),
-            'declaration' => !empty($labApplication->signed) || !empty($labApplication->date),
+            'basic_info' => ! empty($general?->cab_name) || ! empty($general?->email),
+            'about_yourself' => ! empty($labApplication->selves_name) || ! empty($labApplication->selves_parent_organization),
+            'about_staff' => ! empty($labApplication->staff_name) || ! empty($labApplication->staff_quality_name),
+            'calibration_scope' => ! empty($labApplication->scop_calib_field) && $labApplication->scop_calib_field !== '[]',
+            'testing_scope' => ! empty($labApplication->scop_materials) || ! empty($labApplication->scop_description),
+            'calibration_facility' => ! empty($labApplication->calibration_fully) || ! empty($labApplication->calibration_compliance),
+            'other_approvals' => ! empty($labApplication->approvals_name) || ! empty($labApplication->approvals_scope),
+            'declaration' => ! empty($labApplication->signed) || ! empty($labApplication->date),
         ];
 
-        return view('admin.application.certification.index', compact('labApplication', 'savedSections', 'scopes', 'scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries', 'cbApplication', 'cbStaff', 'cbApprovals', 'cbScopes', 'cbSavedSections'));
+        return view('admin.application.certification.index', compact('cbApplication', 'cbData', 'labApplication', 'savedSections', 'scopes', 'scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries'));
     }
 
-    public function saveCertificationBodiesBasicInfo(Request $request)
+    private function loadCbApplicationData(CbApplication $application): array
     {
-        $general = $this->certificationBodiesService->saveBasicInfo($request);
-        session(['application_id' => $general->id]);
-        return redirect()->route('application.create', ['scheme_name' => 'Certification Bodies', 'application' => $request->input('application')])
-            ->with('success', 'Basic Certification Body information saved successfully.')
-            ->with('open_section', 'basic_info');
-    }
+        $tables = [
+            'contact' => 'cb_contacts',
+            'sub_offices' => 'cb_sub_offices',
+            'requested_scopes' => 'cb_requested_scopes',
+            'documents' => 'cb_documents',
+            'authorized_person' => 'cb_authorized_persons',
+            'parent_organization' => 'cb_parent_organizations',
+            'invoice_address' => 'cb_invoice_addresses',
+            'consultant' => 'cb_consultants',
+            'staff_roles' => 'cb_staff_roles',
+            'management_members' => 'cb_management_members',
+            'permanent_auditors' => 'cb_permanent_auditors',
+            'freelance_auditors' => 'cb_freelance_auditors',
+            'qms_scopes' => 'cb_qms_scopes',
+            'ems_scopes' => 'cb_ems_scopes',
+            'ohs_scopes' => 'cb_ohs_scopes',
+            'fsms_scopes' => 'cb_fsms_scopes',
+            'mdqms_scopes' => 'cb_mdqms_scopes',
+            'isms_scopes' => 'cb_isms_scopes',
+            'non_compliance' => 'cb_non_compliance',
+            'other_approvals' => 'cb_other_approvals',
+            'declaration' => 'cb_declarations',
+        ];
 
-    public function saveCertificationBodiesAboutYourselves(Request $request, CertificationGeneral $general)
-    {
-        $this->certificationBodiesService->saveAboutYourselves($request, $general);
-        return redirect()->route('application.create', ['scheme_name' => 'Certification Bodies', 'application' => request('application')])
-            ->with('success', 'Part 1 saved successfully.')
-            ->with('open_section', 'about_yourselves');
-    }
+        $data = [];
+        foreach ($tables as $key => $table) {
+            $rows = DB::table($table)->where('application_id', $application->id)->get();
+            $data[$key] = str_contains($key, 'contact') || in_array($key, ['authorized_person', 'parent_organization', 'invoice_address', 'consultant', 'declaration'], true)
+                ? $rows->first()
+                : $rows;
+        }
 
-    public function saveCertificationBodiesStaff(Request $request, CertificationGeneral $general)
-    {
-        $this->certificationBodiesService->saveStaff($request, $general);
-        return redirect()->route('application.create', ['scheme_name' => 'Certification Bodies', 'application' => request('application')])
-            ->with('success', 'Part 2 saved successfully.')
-            ->with('open_section', 'staff');
-    }
+        $savedSections = [
+            'basic_info' => ! empty($application->organization_name),
+            'body_info' => ! empty(optional($data['contact'])->certification_body_name),
+            'accreditation_request' => $data['requested_scopes']->isNotEmpty(),
+            'documents' => $data['documents']->isNotEmpty(),
+            'about_yourselves' => ! empty(optional($data['authorized_person'])->name),
+            'staff_info' => $data['staff_roles']->isNotEmpty() || $data['management_members']->isNotEmpty(),
+            'scope_application' => $data['qms_scopes']->isNotEmpty() || $data['fsms_scopes']->isNotEmpty() || $data['isms_scopes']->isNotEmpty(),
+            'quality_system' => $data['non_compliance']->isNotEmpty(),
+            'other_approvals' => $data['other_approvals']->isNotEmpty(),
+            'declaration' => (bool) optional($data['declaration'])->declaration_accepted,
+        ];
 
-    public function saveCertificationBodiesScope(Request $request, CertificationGeneral $general)
-    {
-        $this->certificationBodiesService->saveScope($request, $general);
-        return redirect()->route('application.create', ['scheme_name' => 'Certification Bodies', 'application' => request('application')])
-            ->with('success', 'Part 3 saved successfully.')
-            ->with('open_section', 'scope');
-    }
+        $data['saved_sections'] = $savedSections;
 
-    public function saveCertificationBodiesQualitySystem(Request $request, CertificationGeneral $general)
-    {
-        $this->certificationBodiesService->saveQualitySystem($request, $general);
-        return redirect()->route('application.create', ['scheme_name' => 'Certification Bodies', 'application' => request('application')])
-            ->with('success', 'Part 4 saved successfully.')
-            ->with('open_section', 'quality_system');
-    }
-
-    public function saveCertificationBodiesApprovals(Request $request, CertificationGeneral $general)
-    {
-        $this->certificationBodiesService->saveOtherApprovals($request, $general);
-        return redirect()->route('application.create', ['scheme_name' => 'Certification Bodies', 'application' => request('application')])
-            ->with('success', 'Part 5 saved successfully.')
-            ->with('open_section', 'approvals');
-    }
-
-    public function saveCertificationBodiesDeclaration(Request $request, CertificationGeneral $general)
-    {
-        $this->certificationBodiesService->saveDeclaration($request, $general);
-        return redirect()->route('application.create', ['scheme_name' => 'Certification Bodies', 'application' => request('application')])
-            ->with('success', 'Part 6 saved successfully.')
-            ->with('open_section', 'declaration');
+        return $data;
     }
 
     public function saveBasicInfo(Request $request, ApplicationForLab $applicationForLab)
@@ -427,7 +469,7 @@ class ApplicationController extends Controller
         ]);
 
         if (empty($general->reference_no)) {
-            $general->reference_no = 'CAB-' . now()->format('Ymd') . rand(1000, 9999);
+            $general->reference_no = 'CAB-'.now()->format('Ymd').rand(1000, 9999);
         }
 
         $general->save();
@@ -1276,6 +1318,325 @@ class ApplicationController extends Controller
     // }
 
     // Store Document
+    public function saveCbSection(Request $request, CbApplication $cbApplication, string $section)
+    {
+        abort_unless($cbApplication->created_by === auth()->id(), 403);
+        abort_if($cbApplication->status === 'Submitted', 403, 'Submitted applications cannot be edited.');
+
+        $sectionHandlers = [
+            'basic_info' => 'saveCbBasicInfo',
+            // 'body_info' => 'saveCbBodyInfo',
+            // 'accreditation_request' => 'saveCbAccreditationRequest',
+            'about_yourselves' => 'saveCbAboutYourselves',
+            'staff_info' => 'saveCbStaffInfo',
+            'scope_application' => 'saveCbScopeApplication',
+            'quality_system' => 'saveCbQualitySystem',
+            'other_approvals' => 'saveCbOtherApprovals',
+            'declaration' => 'saveCbDeclaration',
+        ];
+
+        abort_unless(isset($sectionHandlers[$section]), 404);
+
+        return $this->{$sectionHandlers[$section]}($request, $cbApplication);
+    }
+
+    // public function uploadCbDocument(Request $request, CbApplication $cbApplication)
+    // {
+    //     abort_unless($cbApplication->created_by === auth()->id(), 403);
+    //     abort_if($cbApplication->status === 'Submitted', 403, 'Submitted applications cannot be edited.');
+
+    //     $data = $request->validate([
+    //         'document_type' => 'required|string|max:100',
+    //         'document_file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:5120',
+    //     ]);
+
+    //     $existing = DB::table('cb_documents')
+    //         ->where('application_id', $cbApplication->id)
+    //         ->where('document_type', $data['document_type'])
+    //         ->first();
+
+    //     if ($existing && Storage::disk('public')->exists($existing->file_path)) {
+    //         Storage::disk('public')->delete($existing->file_path);
+    //     }
+
+    //     $file = $request->file('document_file');
+    //     $safeType = Str::slug($data['document_type']);
+    //     $fileName = $safeType.'_'.now()->format('YmdHis').'.'.$file->getClientOriginalExtension();
+    //     $path = $file->storeAs("applications/certification-bodies/{$cbApplication->id}/{$safeType}", $fileName, 'public');
+
+    //     DB::table('cb_documents')->updateOrInsert(
+    //         [
+    //             'application_id' => $cbApplication->id,
+    //             'document_type' => $data['document_type'],
+    //         ],
+    //         [
+    //             'file_name' => $fileName,
+    //             'original_name' => $file->getClientOriginalName(),
+    //             'file_path' => $path,
+    //             'mime_type' => $file->getMimeType(),
+    //             'uploaded_by' => auth()->id(),
+    //             'updated_at' => now(),
+    //             'created_at' => $existing->created_at ?? now(),
+    //         ]
+    //     );
+
+    //     return back()->with('success', 'Document saved successfully.')->with('open_section', 'documents');
+    // }
+
+    // public function deleteCbDocument(CbApplication $cbApplication, int $document)
+    // {
+    //     abort_unless($cbApplication->created_by === auth()->id(), 403);
+    //     abort_if($cbApplication->status === 'Submitted', 403, 'Submitted applications cannot be edited.');
+
+    //     $row = DB::table('cb_documents')
+    //         ->where('application_id', $cbApplication->id)
+    //         ->where('id', $document)
+    //         ->first();
+
+    //     if ($row && Storage::disk('public')->exists($row->file_path)) {
+    //         Storage::disk('public')->delete($row->file_path);
+    //     }
+
+    //     DB::table('cb_documents')->where('application_id', $cbApplication->id)->where('id', $document)->delete();
+
+    //     return back()->with('success', 'Document deleted successfully.')->with('open_section', 'documents');
+    // }
+
+    private function saveCbBasicInfo(Request $request, CbApplication $application)
+    {
+        $data = $request->validate([
+            'scheme_name' => 'required|string|max:255',
+            'application_type' => 'required|string|max:255',
+            'application_no' => 'nullable|string|max:255',
+            'organization_name' => 'required|string|max:255',
+            'accreditation_type' => 'nullable|string|max:255',
+        ]);
+
+        $application->update(array_merge($data, ['status' => 'Draft']));
+
+        return $this->cbSectionResponse($request, 'Basic application information saved.', 'basic_info');
+    }
+
+    private function saveCbAboutYourselves(Request $request, CbApplication $application)
+    {
+        $data = $request->validate([
+            'authorized_person.title' => 'nullable|string|max:100',
+            'authorized_person.name' => 'required|string|max:255',
+            'authorized_person.position' => 'nullable|string|max:255',
+            'parent_organization.parent_organization' => 'nullable|string|max:255',
+            'parent_organization.relationship' => 'nullable|string|max:255',
+            'parent_organization.address' => 'nullable|string',
+            'parent_organization.postcode' => 'nullable|string|max:50',
+            'parent_organization.telephone' => 'nullable|string|max:100',
+            'parent_organization.fax' => 'nullable|string|max:100',
+            'parent_organization.ownership_type' => 'nullable|string|max:255',
+            'parent_organization.ownership_other_description' => 'nullable|string',
+            'parent_organization.main_activity' => 'nullable|in:yes,no',
+            'parent_organization.main_activity_description' => 'nullable|string',
+            'invoice_address.organization' => 'nullable|string|max:255',
+            'invoice_address.address' => 'nullable|string',
+            'invoice_address.postcode' => 'nullable|string|max:50',
+            'invoice_address.telephone' => 'nullable|string|max:100',
+            'invoice_address.fax' => 'nullable|string|max:100',
+            'consultant.consultant_name' => 'nullable|string|max:255',
+            'consultant.organization' => 'nullable|string|max:255',
+            'consultant.address' => 'nullable|string',
+            'consultant.postcode' => 'nullable|string|max:50',
+            'consultant.telephone' => 'nullable|string|max:100',
+            'consultant.fax' => 'nullable|string|max:100',
+            'consultant.email' => 'nullable|email|max:255',
+        ]);
+
+        foreach ([
+            'authorized_person' => 'cb_authorized_persons',
+            'parent_organization' => 'cb_parent_organizations',
+            'invoice_address' => 'cb_invoice_addresses',
+            'consultant' => 'cb_consultants',
+        ] as $key => $table) {
+            DB::table($table)->updateOrInsert(['application_id' => $application->id], $this->timestamps($data[$key] ?? []));
+        }
+
+        return $this->cbSectionResponse($request, 'About yourselves saved.', 'about_yourselves');
+    }
+
+    private function saveCbStaffInfo(Request $request, CbApplication $application)
+    {
+        $data = $request->validate([
+            'chief_executive' => 'nullable|array',
+            'quality_representative' => 'nullable|array',
+            'management_members' => 'nullable|array',
+            'permanent_auditors' => 'nullable|array',
+            'freelance_auditors' => 'nullable|array',
+        ]);
+
+        DB::table('cb_staff_roles')->where('application_id', $application->id)->delete();
+        foreach (['chief_executive' => 'Chief Executive', 'quality_representative' => 'Quality Management Representative'] as $key => $role) {
+            foreach ($data[$key] ?? [] as $row) {
+                if (! array_filter($row)) {
+                    continue;
+                }
+                DB::table('cb_staff_roles')->insert($this->timestamps(array_merge($row, [
+                    'application_id' => $application->id,
+                    'role' => $role,
+                ])));
+            }
+        }
+        $this->replaceRows('cb_management_members', $application->id, $data['management_members'] ?? []);
+        $this->replaceRows('cb_permanent_auditors', $application->id, $data['permanent_auditors'] ?? []);
+        $this->replaceRows('cb_freelance_auditors', $application->id, $data['freelance_auditors'] ?? []);
+
+        return $this->cbSectionResponse($request, 'Staff information saved.', 'staff_info');
+    }
+
+    private function saveCbScopeApplication(Request $request, CbApplication $application)
+    {
+        $data = $request->validate([
+            'qms_scopes' => 'nullable|array',
+            'ems_scopes' => 'nullable|array',
+            'ohs_scopes' => 'nullable|array',
+            'fsms_scopes' => 'nullable|array',
+            'mdqms_scopes' => 'nullable|array',
+            'isms_scopes' => 'nullable|array',
+        ]);
+
+        foreach ([
+            'qms_scopes' => 'cb_qms_scopes',
+            'ems_scopes' => 'cb_ems_scopes',
+            'ohs_scopes' => 'cb_ohs_scopes',
+            'fsms_scopes' => 'cb_fsms_scopes',
+            'mdqms_scopes' => 'cb_mdqms_scopes',
+            'isms_scopes' => 'cb_isms_scopes',
+        ] as $key => $table) {
+            $this->replaceRows($table, $application->id, $data[$key] ?? []);
+        }
+
+        return $this->cbSectionResponse($request, 'Scope of application saved.', 'scope_application');
+    }
+
+    private function saveCbQualitySystem(Request $request, CbApplication $application)
+    {
+        $data = $request->validate([
+            'complies' => 'required|in:yes,no',
+            'non_compliance' => 'nullable|array',
+        ]);
+        // dd($request->all());
+
+        $rows = $data['complies'] === 'no' ? ($data['non_compliance'] ?? []) : [['complies' => 'yes']];
+
+        $rows = array_map(fn ($row) => array_merge(['complies' => $data['complies']], $row), $rows);
+
+        $this->replaceRows('cb_non_compliance', $application->id, $rows);
+
+        return $this->cbSectionResponse($request, 'Quality system compliance saved.', 'quality_system');
+    }
+
+    private function saveCbOtherApprovals(Request $request, CbApplication $application)
+    {
+        $data = $request->validate(['other_approvals' => 'nullable|array']);
+        $this->replaceRows('cb_other_approvals', $application->id, $data['other_approvals'] ?? []);
+
+        return $this->cbSectionResponse($request, 'Other approvals saved.', 'other_approvals');
+    }
+
+    private function saveCbDeclaration(Request $request, CbApplication $application)
+    {
+        $data = $request->validate([
+            'declaration_accepted' => 'required|accepted',
+            'applicant_fee_amount' => 'required|string|max:100',
+            'digital_signature_name' => 'required|string|max:255',
+            'signed_date' => 'required|date',
+            'final_submit' => 'nullable|in:1',
+        ]);
+
+        DB::table('cb_declarations')->updateOrInsert(
+            ['application_id' => $application->id],
+            $this->timestamps([
+                'declaration_accepted' => true,
+                'applicant_fee_amount' => $data['applicant_fee_amount'],
+                'digital_signature_name' => $data['digital_signature_name'],
+                'signed_date' => $data['signed_date'],
+            ])
+        );
+
+        if (! empty($data['final_submit'])) {
+            $this->validateCbFinalSubmission($application);
+            $application->update([
+                'status' => 'Submitted',
+                'submitted_at' => now(),
+                'application_no' => $application->application_no ?: 'CB-'.now()->format('Ymd').'-'.$application->id,
+            ]);
+        }
+
+        return $this->cbSectionResponse($request, ! empty($data['final_submit']) ? 'Application submitted successfully.' : 'Declaration saved.', 'declaration');
+    }
+
+    private function validateCbFinalSubmission(CbApplication $application): void
+    {
+        $requiredDocuments = [
+            'Quality Manual',
+            'Quality Procedures',
+            'Staff List',
+            'Certified Organizations List',
+            'Applicant Fee Evidence',
+            'Legal Entity Proof',
+            'F-02/29 Form',
+        ];
+
+        $uploaded = DB::table('cb_documents')->where('application_id', $application->id)->pluck('document_type')->all();
+        $missingDocuments = array_diff($requiredDocuments, $uploaded);
+
+        $requiredTables = [
+            'cb_contacts' => 'Certification Body Information',
+            'cb_requested_scopes' => 'Accreditation Request',
+            'cb_authorized_persons' => 'About Yourselves',
+            'cb_staff_roles' => 'Staff Information',
+            'cb_declarations' => 'Declaration',
+        ];
+
+        $missing = [];
+        foreach ($requiredTables as $table => $label) {
+            if (! DB::table($table)->where('application_id', $application->id)->exists()) {
+                $missing[] = $label;
+            }
+        }
+
+        if ($missingDocuments || $missing) {
+            abort(422, 'Complete missing sections/documents before submission: '.implode(', ', array_merge($missing, $missingDocuments)));
+        }
+    }
+
+    private function replaceRows(string $table, int $applicationId, array $rows): void
+    {
+        DB::table($table)->where('application_id', $applicationId)->delete();
+
+        foreach ($rows as $row) {
+            $row = array_filter($row, fn ($value) => $value !== null && $value !== '');
+            if (! $row) {
+                continue;
+            }
+            DB::table($table)->insert($this->timestamps(array_merge($row, ['application_id' => $applicationId])));
+
+        }
+    }
+
+    private function timestamps(array $data): array
+    {
+        return array_merge($data, ['created_at' => now(), 'updated_at' => now()]);
+    }
+
+    private function cbSectionResponse(Request $request, string $message, string $section)
+    {
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'open_section' => $section,
+            ]);
+        }
+
+        return back()->with('success', $message)->with('open_section', $section);
+    }
+
     public function documentStore(Request $request)
     {
         // dd($request->all());
@@ -1304,6 +1665,593 @@ class ApplicationController extends Controller
         ]);
 
         return response()->json(['success' => true, 'message' => 'Document created successfully']);
+    }
+
+    private function loadMedicalLaboratoryData(MlabApplication $application): array
+    {
+        // Step 1: Organisation & Contact
+        $step1 = DB::table('mlab_step1_organisation')
+            ->where('mlab_application_id', $application->id)
+            ->first();
+
+        // Step 2: Staff
+        $technicalManagement = DB::table('mlab_technical_management')
+            ->where('mlab_application_id', $application->id)
+            ->get();
+
+        $qualityManager = DB::table('mlab_quality_manager')
+            ->where('mlab_application_id', $application->id)
+            ->first();
+
+        $labStaff = DB::table('mlab_lab_staff')
+            ->where('mlab_application_id', $application->id)
+            ->get();
+
+        // Step 3: Scope
+        $scopeTests = DB::table('mlab_scope_tests')
+            ->where('mlab_application_id', $application->id)
+            ->get()
+            ->map(function ($row) {
+                $row->qc_measures = $row->qc_measures ? json_decode($row->qc_measures, true) : [];
+
+                return $row;
+            });
+
+        $equipment = DB::table('mlab_equipment')
+            ->where('mlab_application_id', $application->id)
+            ->get();
+
+        $referenceMaterials = DB::table('mlab_reference_materials')
+            ->where('mlab_application_id', $application->id)
+            ->get();
+
+        $proficiencyTesting = DB::table('mlab_proficiency_testing')
+            ->where('mlab_application_id', $application->id)
+            ->get();
+
+        // Step 4: Quality System
+        $calibrationSystem = DB::table('mlab_calibration_system')
+            ->where('mlab_application_id', $application->id)
+            ->first();
+
+        $isoCompliance = DB::table('mlab_iso_compliance')
+            ->where('mlab_application_id', $application->id)
+            ->first();
+
+        if ($isoCompliance && $isoCompliance->non_compliance_areas) {
+            $isoCompliance->non_compliance_areas = json_decode($isoCompliance->non_compliance_areas, true);
+        }
+
+        // Step 5: Other Approvals
+        $otherApprovals = DB::table('mlab_other_approvals')
+            ->where('mlab_application_id', $application->id)
+            ->get();
+
+        // Step 6: Declaration
+        $declaration = DB::table('mlab_declarations')
+            ->where('mlab_application_id', $application->id)
+            ->first();
+
+        // Documents (Step 7)
+        $documents = DB::table('mlab_documents')
+            ->where('mlab_application_id', $application->id)
+            ->get();
+
+        // Build saved sections status
+        $savedSections = [
+            'step1' => (bool) $step1,
+            'step2' => $technicalManagement->isNotEmpty() || (bool) $qualityManager || $labStaff->isNotEmpty(),
+            'step3' => $scopeTests->isNotEmpty() || $equipment->isNotEmpty() || $referenceMaterials->isNotEmpty() || $proficiencyTesting->isNotEmpty(),
+            'step4' => (bool) $calibrationSystem || (bool) $isoCompliance,
+            'step5' => $otherApprovals->isNotEmpty(),
+            'step6' => (bool) $declaration,
+            'step7' => $documents->isNotEmpty() || $application->status === 'submitted',
+        ];
+
+        return [
+            'step1_organisation' => $step1,
+            'technical_management' => $technicalManagement,
+            'quality_manager' => $qualityManager,
+            'lab_staff' => $labStaff,
+            'scope_tests' => $scopeTests,
+            'equipment' => $equipment,
+            'reference_materials' => $referenceMaterials,
+            'proficiency_testing' => $proficiencyTesting,
+            'calibration_system' => $calibrationSystem,
+            'iso_compliance' => $isoCompliance,
+            'other_approvals' => $otherApprovals,
+            'declaration' => $declaration,
+            'documents' => $documents,
+            'saved_sections' => $savedSections,
+        ];
+    }
+
+    /**
+     * Replace rows in a table for Medical Laboratory (uses mlab_application_id)
+     */
+    private function replaceMlabRows(string $table, int $applicationId, array $rows): void
+    {
+        DB::table($table)->where('mlab_application_id', $applicationId)->delete();
+
+        foreach ($rows as $row) {
+            $row = array_filter($row, fn ($value) => $value !== null && $value !== '');
+            if (empty($row)) {
+                continue;
+            }
+            DB::table($table)->insert($this->timestamps(array_merge($row, ['mlab_application_id' => $applicationId])));
+        }
+    }
+
+    /**
+     * Helper to add timestamps
+     */
+    // private function timestamps(array $data): array
+    // {
+    //     return array_merge($data, ['created_at' => now(), 'updated_at' => now()]);
+    // }
+
+    /**
+     * Response helper for MLab sections
+     */
+    private function mlabSectionResponse(Request $request, string $message, string $section)
+    {
+        session()->put('mlab_saved_sections.'.$section, true);
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'open_section' => $section,
+            ]);
+        }
+
+        return back()->with('success', $message)->with('open_section', $section);
+    }
+
+    public function saveMlabStep1(Request $request, MlabApplication $mlabApplication)
+    {
+        $data = $request->validate([
+            'organisation_name' => 'required|string|max:255',
+            'lab_address' => 'required|string',
+            // 'postcode' => 'nullable|string|max:100',
+            'tel' => 'nullable|string|max:100',
+            'fax' => 'nullable|string|max:100',
+            'title' => 'nullable|string|max:100',
+            'contact_name' => 'required|string|max:255',
+            'contact_designation' => 'nullable|string|max:255',
+            'contact_address' => 'nullable|string',
+            'contact_tel' => 'nullable|string|max:100',
+            'contact_fax' => 'nullable|string|max:100',
+            'contact_email' => 'nullable|email|max:255',
+            'contact_mobile' => 'nullable|string|max:100',
+            'parent_organisation' => 'nullable|string|max:255',
+            'parent_relationship' => 'nullable|string|max:255',
+            'parent_address' => 'nullable|string',
+            'parent_postcode' => 'nullable|string|max:100',
+            'parent_tel' => 'nullable|string|max:100',
+            'parent_fax' => 'nullable|string|max:100',
+            'invoice_organisation' => 'nullable|string|max:255',
+            'invoice_address' => 'nullable|string',
+            'invoice_postcode' => 'nullable|string|max:100',
+            'invoice_tel' => 'nullable|string|max:100',
+            'invoice_fax' => 'nullable|string|max:100',
+            'ownership_type' => 'nullable|string|max:255',
+            'registration_no' => 'nullable|string|max:100',
+            'ownership_other_description' => 'nullable|string',
+            'testing_main_activity' => 'nullable|in:yes,no',
+            'main_activity_description' => 'nullable|string',
+            'consultant_name' => 'nullable|string|max:255',
+            'consultant_organisation' => 'nullable|string|max:255',
+            'consultant_address' => 'nullable|string',
+            'consultant_postcode' => 'nullable|string|max:100',
+            'consultant_tel' => 'nullable|string|max:100',
+            'consultant_fax' => 'nullable|string|max:100',
+            'consultant_email' => 'nullable|email|max:255',
+            'facility_permanent' => 'nullable|in:yes',
+            'facility_sample_collection' => 'nullable|in:yes',
+            'facility_temporary' => 'nullable|in:yes',
+            'facility_mobile' => 'nullable|in:yes',
+            'fields_of_testing' => 'nullable|array',
+            'fields_of_testing.*' => 'string|max:100',
+            'other_field' => 'nullable|string',
+            'sample_collection_list' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+        ]);
+
+        // Update master application
+        $mlabApplication->update([
+            'organisation_name' => $data['organisation_name'],
+            'lab_address' => $data['lab_address'],
+        ]);
+
+        // Handle file upload for sample collection list
+        $filePath = null;
+        if ($request->hasFile('sample_collection_list')) {
+            $file = $request->file('sample_collection_list');
+            $fileName = 'sample_list_'.time().'.'.$file->getClientOriginalExtension();
+            $filePath = $file->storeAs("applications/medical-laboratory/{$mlabApplication->id}", $fileName, 'public');
+        }
+
+        // Save to step1 table
+        DB::table('mlab_step1_organisation')->updateOrInsert(
+            ['mlab_application_id' => $mlabApplication->id],
+            $this->timestamps([
+                // 'organisation_name' => $data['organisation_name'],
+                // 'lab_address' => $data['lab_address'],
+                // 'postcode' => $data['postcode'] ?? null,
+                // 'tel' => $data['tel'] ?? null,
+                // 'fax' => $data['fax'] ?? null,
+                'title' => $data['title'] ?? null,
+                'contact_name' => $data['contact_name'],
+                'contact_designation' => $data['contact_designation'] ?? null,
+                'contact_address' => $data['contact_address'] ?? null,
+                'contact_tel' => $data['contact_tel'] ?? null,
+                'contact_fax' => $data['contact_fax'] ?? null,
+                'contact_email' => $data['contact_email'] ?? null,
+                'contact_mobile' => $data['contact_mobile'] ?? null,
+                'parent_organisation' => $data['parent_organisation'] ?? null,
+                'parent_relationship' => $data['parent_relationship'] ?? null,
+                'parent_address' => $data['parent_address'] ?? null,
+                'parent_postcode' => $data['parent_postcode'] ?? null,
+                'parent_tel' => $data['parent_tel'] ?? null,
+                'parent_fax' => $data['parent_fax'] ?? null,
+                'invoice_organisation' => $data['invoice_organisation'] ?? null,
+                'invoice_address' => $data['invoice_address'] ?? null,
+                'invoice_postcode' => $data['invoice_postcode'] ?? null,
+                'invoice_tel' => $data['invoice_tel'] ?? null,
+                'invoice_fax' => $data['invoice_fax'] ?? null,
+                'ownership_type' => $data['ownership_type'] ?? null,
+                'registration_no' => $data['registration_no'] ?? null,
+                'ownership_other_description' => $data['ownership_other_description'] ?? null,
+                'testing_main_activity' => $data['testing_main_activity'] ?? null,
+                'main_activity_description' => $data['main_activity_description'] ?? null,
+                'consultant_name' => $data['consultant_name'] ?? null,
+                'consultant_organisation' => $data['consultant_organisation'] ?? null,
+                'consultant_address' => $data['consultant_address'] ?? null,
+                'consultant_postcode' => $data['consultant_postcode'] ?? null,
+                'consultant_tel' => $data['consultant_tel'] ?? null,
+                'consultant_fax' => $data['consultant_fax'] ?? null,
+                'consultant_email' => $data['consultant_email'] ?? null,
+                'facility_permanent' => $request->has('facility_permanent') ? 'yes' : 'no',
+                'facility_sample_collection' => $request->has('facility_sample_collection') ? 'yes' : 'no',
+                'facility_temporary' => $request->has('facility_temporary') ? 'yes' : 'no',
+                'facility_mobile' => $request->has('facility_mobile') ? 'yes' : 'no',
+                'sample_collection_list' => $filePath,
+                'fields_of_testing' => json_encode($data['fields_of_testing'] ?? []),
+                'other_field' => $data['other_field'] ?? null,
+            ])
+        );
+
+        return $this->mlabSectionResponse($request, 'Step 1 saved successfully.', 'step1');
+    }
+
+    public function saveMlabStep2(Request $request, MlabApplication $mlabApplication)
+    {
+        $data = $request->validate([
+            'technical_management' => 'nullable|array',
+            'technical_management.*.department' => 'nullable|string|max:255',
+            'technical_management.*.name_designation' => 'nullable|string|max:255',
+            'technical_management.*.qualification' => 'nullable|string',
+            'technical_management.*.experience' => 'nullable|string',
+            'technical_management.*.training' => 'nullable|string',
+            'technical_management.*.authorized_area' => 'nullable|string',
+            'technical_management.*.signature' => 'nullable|string|max:255',
+            'quality_manager' => 'nullable|array',
+            'quality_manager.*.name' => 'nullable|string|max:255',
+            'quality_manager.*.qualification' => 'nullable|string',
+            'quality_manager.*.experience' => 'nullable|string',
+            'quality_manager.*.training' => 'nullable|string',
+            'quality_manager.*.signature' => 'nullable|string|max:255',
+            'lab_staff' => 'nullable|array',
+            'lab_staff.*.section_name' => 'nullable|string|max:255',
+            'lab_staff.*.section_leader' => 'nullable|string|max:255',
+            'lab_staff.*.qualification' => 'nullable|string',
+            'lab_staff.*.experience' => 'nullable|string',
+            'lab_staff.*.training' => 'nullable|string',
+            'lab_staff.*.authorized_area' => 'nullable|string',
+        ]);
+
+        // Technical Management
+        $this->replaceMlabRows('mlab_technical_management', $mlabApplication->id, $data['technical_management'] ?? []);
+
+        // Laboratory Staff
+        $this->replaceMlabRows('mlab_lab_staff', $mlabApplication->id, $data['lab_staff'] ?? []);
+
+        // Quality Manager – always delete existing and insert the first non‑empty row
+        DB::table('mlab_quality_manager')->where('mlab_application_id', $mlabApplication->id)->delete();
+
+        $qmData = $data['quality_manager'] ?? [];
+        // Find the first row that has any value
+        foreach ($qmData as $row) {
+            $row = array_filter($row, fn ($v) => $v !== null && $v !== '');
+            if (! empty($row)) {
+                DB::table('mlab_quality_manager')->insert(
+                    $this->timestamps(array_merge($row, ['mlab_application_id' => $mlabApplication->id]))
+                );
+                break; // only insert one row
+            }
+        }
+
+        return $this->mlabSectionResponse($request, 'Step 2 saved successfully.', 'step2');
+    }
+
+    public function saveMlabStep3(Request $request, MlabApplication $mlabApplication)
+    {
+        $data = $request->validate([
+            'scope_tests' => 'nullable|array',
+            'scope_tests.*.sample_type' => 'nullable|string|max:255',
+            'scope_tests.*.test_type' => 'nullable|string|max:255',
+            'scope_tests.*.range' => 'nullable|string|max:255',
+            'scope_tests.*.detection_limit' => 'nullable|string|max:255',
+            'scope_tests.*.uncertainty' => 'nullable|string|max:255',
+            'scope_tests.*.standard_method' => 'nullable|string',
+            'scope_tests.*.equipment_used' => 'nullable|string',
+            'scope_tests.*.qc_measures' => 'nullable|array',
+            'equipment' => 'nullable|array',
+            'equipment.*.equipment_name' => 'nullable|string|max:255',
+            'equipment.*.model' => 'nullable|string|max:255',
+            'equipment.*.capacity' => 'nullable|string|max:255',
+            'equipment.*.detection_limit' => 'nullable|string|max:255',
+            'equipment.*.calibration_date' => 'nullable|date',
+            'equipment.*.next_calibration' => 'nullable|date',
+            'equipment.*.usage' => 'nullable|string',
+            'reference_materials' => 'nullable|array',
+            'reference_materials.*.name' => 'nullable|string|max:255',
+            'reference_materials.*.supplier' => 'nullable|string|max:255',
+            'reference_materials.*.expiry' => 'nullable|date',
+            'reference_materials.*.traceability' => 'nullable|string',
+            'reference_materials.*.purpose' => 'nullable|string',
+            'proficiency_testing' => 'nullable|array',
+            'proficiency_testing.*.sample_type' => 'nullable|string|max:255',
+            'proficiency_testing.*.test' => 'nullable|string|max:255',
+            'proficiency_testing.*.date' => 'nullable|date',
+            'proficiency_testing.*.organizing_body' => 'nullable|string|max:255',
+            'proficiency_testing.*.z_score' => 'nullable|string|max:255',
+            'proficiency_testing.*.corrective_action' => 'nullable|string',
+        ]);
+
+        // Scope tests with QC measures as JSON
+        $scopeRows = array_map(function ($row) {
+            if (! empty($row['qc_measures'])) {
+                $row['qc_measures'] = json_encode(array_values($row['qc_measures']));
+            }
+
+            return $row;
+        }, $data['scope_tests'] ?? []);
+
+        $this->replaceMlabRows('mlab_scope_tests', $mlabApplication->id, $scopeRows);
+        $this->replaceMlabRows('mlab_equipment', $mlabApplication->id, $data['equipment'] ?? []);
+        $this->replaceMlabRows('mlab_reference_materials', $mlabApplication->id, $data['reference_materials'] ?? []);
+        $this->replaceMlabRows('mlab_proficiency_testing', $mlabApplication->id, $data['proficiency_testing'] ?? []);
+
+        return $this->mlabSectionResponse($request, 'Step 3 saved successfully.', 'step3');
+    }
+
+    public function saveMlabStep4(Request $request, MlabApplication $mlabApplication)
+    {
+        $data = $request->validate([
+            'calibration_program_exists' => 'nullable|in:yes,no',
+            'calibration_program_comment' => 'nullable|string',
+            'record_maintained' => 'nullable|in:yes,no',
+            'record_maintained_comment' => 'nullable|string',
+            'facilities_adequate' => 'nullable|in:yes,no',
+            'facilities_adequate_comment' => 'nullable|string',
+            'internal_procedure_exists' => 'nullable|in:yes,no',
+            'internal_procedure_comment' => 'nullable|string',
+            'traceability_pnac' => 'nullable|in:yes,no',
+            'traceability_pnac_comment' => 'nullable|string',
+            'traceability_other' => 'nullable|string',
+            'in_house_calibration' => 'nullable|in:yes,no',
+            'in_house_uncertainty_identified' => 'nullable|in:yes,no',
+            'in_house_uncertainty_incorporated' => 'nullable|in:yes,no',
+            'iso_compliance' => 'nullable|array',
+            'iso_compliance.complies' => 'nullable|in:yes,no',
+            'iso_compliance.non_compliance_areas' => 'nullable|array',
+            'iso_compliance.non_compliance_areas.*.area' => 'nullable|string',
+            'iso_compliance.non_compliance_areas.*.rectification_date' => 'nullable|date',
+        ]);
+
+        // Calibration System
+        $calData = [
+            'calibration_program_exists' => $data['calibration_program_exists'] ?? null,
+            'calibration_program_comment' => $data['calibration_program_comment'] ?? null,
+            'record_maintained' => $data['record_maintained'] ?? null,
+            'record_maintained_comment' => $data['record_maintained_comment'] ?? null,
+            'facilities_adequate' => $data['facilities_adequate'] ?? null,
+            'facilities_adequate_comment' => $data['facilities_adequate_comment'] ?? null,
+            'internal_procedure_exists' => $data['internal_procedure_exists'] ?? null,
+            'internal_procedure_comment' => $data['internal_procedure_comment'] ?? null,
+            'traceability_pnac' => $data['traceability_pnac'] ?? null,
+            'traceability_pnac_comment' => $data['traceability_pnac_comment'] ?? null,
+            'traceability_other' => $data['traceability_other'] ?? null,
+            'in_house_calibration' => $data['in_house_calibration'] ?? null,
+            'in_house_uncertainty_identified' => $data['in_house_uncertainty_identified'] ?? null,
+            'in_house_uncertainty_incorporated' => $data['in_house_uncertainty_incorporated'] ?? null,
+        ];
+        $calData = array_filter($calData, fn ($v) => $v !== null);
+        DB::table('mlab_calibration_system')
+            ->updateOrInsert(
+                ['mlab_application_id' => $mlabApplication->id],
+                $this->timestamps($calData)
+            );
+
+        // ISO Compliance
+        $isoData = [];
+        if (! empty($data['iso_compliance']['complies'])) {
+            $isoData['complies'] = $data['iso_compliance']['complies'];
+            if ($data['iso_compliance']['complies'] === 'no') {
+                $isoData['non_compliance_areas'] = json_encode($data['iso_compliance']['non_compliance_areas'] ?? []);
+            } else {
+                $isoData['non_compliance_areas'] = null;
+            }
+        }
+        if (! empty($isoData)) {
+            DB::table('mlab_iso_compliance')
+                ->updateOrInsert(
+                    ['mlab_application_id' => $mlabApplication->id],
+                    $this->timestamps($isoData)
+                );
+        } else {
+            DB::table('mlab_iso_compliance')
+                ->where('mlab_application_id', $mlabApplication->id)
+                ->delete();
+        }
+
+        return $this->mlabSectionResponse($request, 'Step 4 saved successfully.', 'step4');
+    }
+
+    public function saveMlabStep5(Request $request, MlabApplication $mlabApplication)
+    {
+        $data = $request->validate([
+            'other_approvals' => 'nullable|array',
+            'other_approvals.*.body_name' => 'nullable|string|max:255',
+            'other_approvals.*.scope' => 'nullable|string',
+            'other_approvals.*.certificate_no' => 'nullable|string|max:255',
+            'other_approvals.*.start_date' => 'nullable|date',
+            'other_approvals.*.expiry_date' => 'nullable|date',
+        ]);
+
+        $this->replaceMlabRows('mlab_other_approvals', $mlabApplication->id, $data['other_approvals'] ?? []);
+
+        return $this->mlabSectionResponse($request, 'Step 5 saved successfully.', 'step5');
+    }
+
+    public function saveMlabStep6(Request $request, MlabApplication $mlabApplication)
+    {
+        $data = $request->validate([
+            'application_types' => 'nullable|array',
+            'application_types.*' => 'string|max:100',
+            'other_type' => 'nullable|string',
+            'agreement_accepted' => 'nullable|boolean',
+            'fee' => 'nullable|string|max:100',
+            'signed_by' => 'nullable|string|max:255',
+            'signed_date' => 'nullable|date',
+            'final_submit' => 'nullable|in:1',
+        ]);
+
+        // Save declaration
+        DB::table('mlab_declarations')->updateOrInsert(
+            ['mlab_application_id' => $mlabApplication->id],
+            $this->timestamps([
+                'application_types' => json_encode($data['application_types'] ?? []),
+                'other_type' => $data['other_type'] ?? null,
+                'agreement_accepted' => $request->boolean('agreement_accepted'),
+                'fee' => $data['fee'] ?? null,
+                'signed_by' => $data['signed_by'] ?? null,
+                'signed_date' => $data['signed_date'] ?? null,
+            ])
+        );
+
+        if (! empty($data['final_submit'])) {
+            $this->validateMlabFinalSubmission($mlabApplication);
+            $mlabApplication->update([
+                'status' => 'submitted',
+                'submitted_at' => now(),
+                'application_no' => $mlabApplication->application_no ?: 'MLAB-'.now()->format('Ymd').'-'.$mlabApplication->id,
+            ]);
+
+            return $this->mlabSectionResponse($request, 'Application submitted successfully.', 'step6');
+        }
+
+        return $this->mlabSectionResponse($request, 'Step 6 saved successfully.', 'step6');
+    }
+
+    private function validateMlabFinalSubmission(MlabApplication $mlabApplication): void
+    {
+        $requiredDocuments = [
+            'Quality Manual',
+            'Standard Operating Procedures',
+            'PT Participation Evidence',
+            'PT Plan',
+            'Agreement Form',
+            'Filled Form',
+            'Applicant Fee Evidence',
+        ];
+
+        $requiredChecks = [
+            'Step 1' => DB::table('mlab_step1_organisation')->where('mlab_application_id', $mlabApplication->id)->exists(),
+            'Step 2' => DB::table('mlab_quality_manager')->where('mlab_application_id', $mlabApplication->id)->exists()
+                || DB::table('mlab_technical_management')->where('mlab_application_id', $mlabApplication->id)->exists(),
+            'Step 3' => DB::table('mlab_scope_tests')->where('mlab_application_id', $mlabApplication->id)->exists(),
+            'Step 4' => DB::table('mlab_calibration_system')->where('mlab_application_id', $mlabApplication->id)->exists()
+                || DB::table('mlab_iso_compliance')->where('mlab_application_id', $mlabApplication->id)->exists(),
+            'Step 5' => DB::table('mlab_other_approvals')->where('mlab_application_id', $mlabApplication->id)->exists(),
+            'Step 6' => DB::table('mlab_declarations')
+                ->where('mlab_application_id', $mlabApplication->id)
+                ->where('agreement_accepted', true)
+                ->whereNotNull('signed_by')
+                ->whereNotNull('signed_date')
+                ->exists(),
+        ];
+
+        $uploaded = DB::table('mlab_documents')->where('mlab_application_id', $mlabApplication->id)->pluck('document_type')->all();
+
+        $missing = [];
+        foreach ($requiredChecks as $label => $exists) {
+            if (! $exists) {
+                $missing[] = $label;
+            }
+        }
+
+        $missingDocuments = array_diff($requiredDocuments, $uploaded);
+
+        if ($missing || $missingDocuments) {
+            abort(422, 'Complete missing sections/documents before submission: '.implode(', ', array_merge($missing, $missingDocuments)));
+        }
+    }
+
+    public function uploadMlabDocument(Request $request, MlabApplication $application)
+    {
+        $data = $request->validate([
+            'document_type' => 'required|string|max:100',
+            'document_file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:5120',
+        ]);
+
+        $existing = DB::table('mlab_documents')
+            ->where('mlab_application_id', $application->id)
+            ->where('document_type', $data['document_type'])
+            ->first();
+
+        if ($existing && Storage::disk('public')->exists($existing->file_path)) {
+            Storage::disk('public')->delete($existing->file_path);
+        }
+
+        $file = $request->file('document_file');
+        $safeType = Str::slug($data['document_type']);
+        $fileName = $safeType.'_'.now()->format('YmdHis').'.'.$file->getClientOriginalExtension();
+        $path = $file->storeAs("applications/medical-laboratory/{$application->id}/{$safeType}", $fileName, 'public');
+
+        DB::table('mlab_documents')->updateOrInsert(
+            [
+                'mlab_application_id' => $application->id,
+                'document_type' => $data['document_type'],
+            ],
+            [
+                'file_name' => $fileName,
+                'original_name' => $file->getClientOriginalName(),
+                'file_path' => $path,
+                'mime_type' => $file->getMimeType(),
+                'uploaded_by' => auth()->id(),
+                'updated_at' => now(),
+                'created_at' => $existing->created_at ?? now(),
+            ]
+        );
+
+        return back()->with('success', 'Document uploaded successfully.')->with('open_section', 'step7');
+    }
+
+    public function deleteMlabDocument(MlabApplication $application, int $document)
+    {
+        $row = DB::table('mlab_documents')
+            ->where('mlab_application_id', $application->id)
+            ->where('id', $document)
+            ->first();
+
+        if ($row && Storage::disk('public')->exists($row->file_path)) {
+            Storage::disk('public')->delete($row->file_path);
+        }
+
+        DB::table('mlab_documents')->where('id', $document)->delete();
+
+        return back()->with('success', 'Document deleted successfully.')->with('open_section', 'step7');
     }
 
     public function submitedApplication()

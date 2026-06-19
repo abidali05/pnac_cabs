@@ -155,7 +155,7 @@
                                 @error('postcode')
                                     {{ $message }}
                                 @enderror
-                            </small></div>y
+                            </small></div>
                     </div>
                     <div class="d-flex justify-content-end mt-3"><button type="submit"
                             class="btn btn-success btn-sm">Save Basic Info</button></div>
