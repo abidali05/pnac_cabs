@@ -1,8 +1,9 @@
 <div class="mt-4">
     <div class="d-flex justify-content-between align-items-center mb-2">
         <h6 class="mb-0">{{ $title }}</h6>
-        @if(!$isLocked && ($allowAdd ?? true))
-            <button type="button" class="btn btn-outline-success btn-sm js-add-row" data-target="{{ $target }}">Add More</button>
+        @if (!$isLocked && ($allowAdd ?? true))
+            <button type="button" class="btn btn-outline-success btn-sm js-add-row" data-target="{{ $target }}">Add
+                More</button>
         @endif
     </div>
     <div class="table-responsive">
@@ -30,6 +31,7 @@
                                     'calibration_date',
                                     'next_calibration',
                                     'expiry_date',
+                                    'expiry',
                                     'start_date',
                                     'end_date',
                                     'rectification_date',
@@ -94,7 +96,7 @@ $isTextarea = in_array($field, [
                             </td>
                         @endforeach
                         <td>
-                            @if(!$isLocked && ($allowAdd ?? true))
+                            @if (!$isLocked && ($allowAdd ?? true))
                                 <button type="button" class="btn btn-sm btn-danger js-remove-row">Remove</button>
                             @endif
                         </td>

@@ -267,7 +267,7 @@ class InspectionBodyController extends Controller
         $scopes = DB::table('inspection_body_scopes')->where('application_id', $application->id)->get();
         $equipment = DB::table('inspection_body_equipment')->where('application_id', $application->id)->get();
         $declaration = DB::table('inspection_body_declarations')->where('application_id', $application->id)->first();
-        $documents = DB::table('inspection_body_documents')->where('application_id', $application->id)->get();
+        // $documents = DB::table('inspection_body_documents')->where('application_id', $application->id)->get();
 
         return [
             'organization' => $org,
@@ -278,27 +278,27 @@ class InspectionBodyController extends Controller
             'scopes' => $scopes,
             'equipment' => $equipment,
             'declaration' => $declaration,
-            'documents' => $documents,
+            // 'documents' => $documents,
             'saved_sections' => [
                 'step1' => (bool) $org,
                 'step2' => $staffRoles->isNotEmpty() || $inspectors->isNotEmpty(),
                 'step3' => $scopes->isNotEmpty() || $equipment->isNotEmpty(),
                 'step4' => (bool) $declaration,
-                'documents' => $documents->isNotEmpty(),
+                // 'documents' => $documents->isNotEmpty(),
             ],
         ];
     }
 
     private function validateFinalSubmission(InspectionBodyApplication $application): void
     {
-        $requiredDocs = [
-            'Quality Manual',
-            'F-02/30 Document Review',
-            'Fee Evidence',
-        ];
+        // $requiredDocs = [
+        //     'Quality Manual',
+        //     'F-02/30 Document Review',
+        //     'Fee Evidence',
+        // ];
 
-        $uploaded = DB::table('inspection_body_documents')->where('application_id', $application->id)->pluck('document_type')->all();
-        $missingDocs = array_diff($requiredDocs, $uploaded);
+        // $uploaded = DB::table('inspection_body_documents')->where('application_id', $application->id)->pluck('document_type')->all();
+        // $missingDocs = array_diff($requiredDocs, $uploaded);
 
         $hasOrg = DB::table('inspection_body_organizations')->where('application_id', $application->id)->exists();
         $hasDecl = DB::table('inspection_body_declarations')
@@ -314,9 +314,9 @@ class InspectionBodyController extends Controller
             $missing[] = 'Step 4 (Declaration with agreement acceptance)';
         }
 
-        if ($missing || $missingDocs) {
-            abort(422, 'Complete missing sections/documents: '.implode(', ', array_merge($missing, $missingDocs)));
-        }
+        // if ($missing || $missingDocs) {
+        //     abort(422, 'Complete missing sections/documents: '.implode(', ', array_merge($missing, $missingDocs)));
+        // }
     }
 
     private function replaceRows(string $table, int $applicationId, array $rows): void
@@ -345,6 +345,6 @@ class InspectionBodyController extends Controller
         return redirect()->route('inspection-body.create', [
             'scheme_name' => 'Inspection Bodies',
             'application' => $application->application_type,
-        ])->with('success', $message)->with('open_section', $section);
+        ])->with('success', 'Inspection Body Application submitted successfully.')->with('open_section', $section);
     }
 }

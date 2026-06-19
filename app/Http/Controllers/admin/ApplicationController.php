@@ -5,8 +5,8 @@ namespace App\Http\Controllers\admin;
 use App\Factories\ScopeFactory;
 use App\Factories\ScopeFetcher;
 use App\Http\Controllers\CertificationBodies\InspectionBodyController;
-use App\Http\Controllers\HalalCertification\HalalCertificationBodyController;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\HalalCertification\HalalCertificationBodyController;
 use App\Models\ApplicationForLab;
 use App\Models\CalibrationScope;
 use App\Models\Category22000;
@@ -435,17 +435,18 @@ class ApplicationController extends Controller
 
     public function saveBasicInfo(Request $request, ApplicationForLab $applicationForLab)
     {
+        // dd($request);
         $validator = Validator::make($request->all(), [
-            'scheme' => 'required|string|max:255',
-            'cab_name' => 'required|string|max:255',
-            'address' => 'required|string|max:1000',
-            'telephone' => ['required', 'string', 'min:7', 'max:30', 'regex:/^[0-9+\-\s]+$/'],
-            'email' => 'required|email|max:255',
-            'ntn_ftn' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9\-\/]+$/'],
-            'website' => 'required|url|max:255',
-            'city' => 'required|string|max:255',
-            'country' => 'required|string|max:255',
-            'postal_code' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9\s\-]+$/'],
+            'organisation' => ['required', 'string', 'max:255'],
+            'cab_name' => ['required', 'string', 'max:255'],
+            'address_laboratory' => ['required', 'string', 'max:1000'],
+            'tel' => ['required', 'string', 'min:7', 'max:30'],
+            'person_email' => ['required', 'email', 'max:255'],
+            'ntn_ftn' => ['required', 'string', 'max:100'],
+            'website' => ['required', 'url', 'max:255'],
+            'city' => ['required', 'string', 'max:255'],
+            'country' => ['required', 'string', 'max:255'],
+            'postcode' => ['required', 'string', 'max:20'],
         ]);
 
         if ($validator->fails()) {
@@ -461,16 +462,16 @@ class ApplicationController extends Controller
         ]);
 
         $general->fill([
-            'scheme' => $validated['scheme'],
+            'scheme' => $validated['organisation'],
             'cab_name' => $validated['cab_name'],
-            'address' => $validated['address'],
-            'telephone' => $validated['telephone'],
-            'email' => $validated['email'],
+            'address' => $validated['address_laboratory'],
+            'telephone' => $validated['tel'],
+            'email' => $validated['person_email'],
             'ntn_ftn' => $validated['ntn_ftn'],
             'website' => $validated['website'],
             'city' => $validated['city'],
             'country' => $validated['country'],
-            'postal_code' => $validated['postal_code'],
+            'postal_code' => $validated['postcode'],
         ]);
 
         if (empty($general->reference_no)) {
@@ -639,34 +640,6 @@ class ApplicationController extends Controller
             ->with('open_section', 'calibration_facility');
     }
 
-    // public function saveCalibrationFacility(Request $request, ApplicationForLab $applicationForLab)
-    // {
-    //     $validator = Validator::make($request->all(), [
-    //         'calibration_fully' => 'required|string',
-    //         'calibration_fully_comment' => 'required|string',
-    //         'calibration_record' => 'required|string',
-    //         'calibration_record_comment' => 'required|string',
-    //         'calibration_adequate' => 'required|string',
-    //         'calibration_adequate_comment' => 'required|string',
-    //         'calibration_procedures' => 'required|string',
-    //         'calibration_procedures_comment' => 'required|string',
-    //         'calibration_internal' => 'required|string',
-    //         'calibration_internal_comment' => 'required|string',
-    //         'calibration_pnac' => 'required|string',
-    //         'calibration_pnac_comment' => 'required|string',
-    //         'calibration_other_comment' => 'required|string',
-    //         'calibration_lab_comment' => 'required|string',
-    //         'calibration_compliance' => 'required|string',
-    //         'calibration_rectified' => 'required|date',
-    //     ]);
-    //     if ($validator->fails()) {
-    //         return back()->withErrors($validator)->withInput()->with('open_section', 'calibration_facility');
-    //     }
-    //     $applicationForLab->update($validator->validated());
-
-    //     return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Calibration facility saved successfully.')->with('open_section', 'calibration_facility');
-    // }
-
     public function saveOtherApprovals(Request $request, ApplicationForLab $applicationForLab)
     {
         $validator = Validator::make($request->all(), [
@@ -683,24 +656,6 @@ class ApplicationController extends Controller
         return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Other approvals saved successfully.')->with('open_section', 'other_approvals');
     }
 
-    // public function saveDeclaration(Request $request, ApplicationForLab $applicationForLab)
-    // {
-    //     $validator = Validator::make($request->all(), [
-    //         'declaration_calibration' => 'required|string|max:100',
-    //         'declaration_testing' => 'required|string|max:100',
-    //         'declaration_extension' => 'required|string|max:255',
-    //         'declaration_laboratory' => 'required|string|max:255',
-    //         'declaration_test_lab' => 'required|string|max:255',
-    //         'signed' => 'required|string|max:255',
-    //         'date' => 'required|date',
-    //     ]);
-    //     if ($validator->fails()) {
-    //         return back()->withErrors($validator)->withInput()->with('open_section', 'declaration');
-    //     }
-    //     $applicationForLab->update($validator->validated());
-
-    //     return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Declaration saved successfully.')->with('open_section', 'declaration');
-    // }
     public function saveDeclaration(Request $request, ApplicationForLab $applicationForLab)
     {
         $validator = Validator::make($request->all(), [
@@ -1033,295 +988,6 @@ class ApplicationController extends Controller
 
     }
 
-    // public function applicationStore(Request $request)
-    // {
-    //     // dd($request->category);
-
-    //     if($request->category == 'Testing' || $request->category == 'Calibration' || $request->category == 'Testing Calibration Laboratoies'){
-    //         $applicationData = $request->only((new ApplicationForLab)->getFillable());
-    //         $applicationData['user_id'] = auth()->user()->id;
-    //         if ($request->hasFile('signed')) {
-    //             $image = $request->file('signed');
-    //             $timestamp = now()->format('Ymd_His');
-    //             $filename = 'application_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
-    //             $path = $image->storeAs('applications', $filename, 'public');
-    //             $applicationData['signed'] = $path;
-    //         }
-    //         $application = ApplicationForLab::create($applicationData);
-
-    //     }elseif($request->category == 'Certification Bodies'){
-    //         $certificationData = $request->only((new CertificationBody)->getFillable());
-    //         $certificationData['user_id'] = auth()->user()->id;
-    //         if ($request->hasFile('signed')) {
-    //             $image = $request->file('signed');
-    //             $timestamp = now()->format('Ymd_His');
-    //             $filename = 'application_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
-    //             $path = $image->storeAs('applications', $filename, 'public');
-    //             $certificationData['signed'] = $path;
-    //         }
-    //         $certification = CertificationBody::create($certificationData);
-
-    //     }elseif($request->category == 'Medical Laboratories'){
-    //         $medicalData = $request->only((new MedicalLaboratory)->getFillable());
-    //         $medicalData['user_id'] = auth()->user()->id;
-    //         $medical = MedicalLaboratory::create($medicalData);
-
-    //     }elseif($request->category == 'Inspection Bodies'){
-    //         $inspectionData = $request->only((new InspectionBody)->getFillable());
-    //         $inspectionData['user_id'] = auth()->user()->id;
-    //         if ($request->hasFile('declaration_signed')) {
-    //             $image = $request->file('declaration_signed');
-    //             $timestamp = now()->format('Ymd_His');
-    //             $filename = 'application_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
-    //             $path = $image->storeAs('applications', $filename, 'public');
-    //             $inspectionData['declaration_signed'] = $path;
-    //         }
-    //         $inspection = InspectionBody::create($inspectionData);
-
-    //     }elseif($request->category == 'Halal Certification Bodies'){
-    //         $halalData = $request->only((new HalalCertificationBody)->getFillable());
-    //         $halalData['user_id'] = auth()->user()->id;
-    //         if ($request->hasFile('declaration_signed')) {
-    //             $image = $request->file('declaration_signed');
-    //             $timestamp = now()->format('Ymd_His');
-    //             $filename = 'application_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
-    //             $path = $image->storeAs('applications', $filename, 'public');
-    //             $halalData['declaration_signed'] = $path;
-    //         }
-    //         $halal = HalalCertificationBody::create($halalData);
-
-    //     }elseif($request->category == 'Proficiency Testing Provider'){
-    //         // dd('ok');
-    //         $ProficiencyData = $request->only((new ProficiencyTesting)->getFillable());
-    //         $ProficiencyData['user_id'] = auth()->user()->id;
-    //         if ($request->hasFile('declaration_signed')) {
-    //             $image = $request->file('declaration_signed');
-    //             $timestamp = now()->format('Ymd_His');
-    //             $filename = 'application_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
-    //             $path = $image->storeAs('applications', $filename, 'public');
-    //             $ProficiencyData['declaration_signed'] = $path;
-    //         }
-    //         $Proficiency = ProficiencyTesting::create($ProficiencyData);
-
-    //     }elseif($request->category == 'Product Certification Bodies'){
-    //         // dd('ok');
-    //         $ProductData = $request->only((new ProductCertification)->getFillable());
-    //         $ProductData['user_id'] = auth()->user()->id;
-    //         if ($request->hasFile('declaration_signed')) {
-    //             $image = $request->file('declaration_signed');
-    //             $timestamp = now()->format('Ymd_His');
-    //             $filename = 'application_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
-    //             $path = $image->storeAs('applications', $filename, 'public');
-    //             $ProductData['declaration_signed'] = $path;
-    //         }
-    //         $Product = ProductCertification::create($ProductData);
-
-    //     }elseif($request->category == 'Personnel Certification Bodies'){
-    //         // dd('ok');
-    //         $PersonnelData = $request->only((new PersonnelCertification)->getFillable());
-    //         $PersonnelData['user_id'] = auth()->user()->id;
-    //         if ($request->hasFile('declaration_signed')) {
-    //             $file = $request->file('declaration_signed');
-    //             $filename = date('dmy') . '_sign_' . time() . '.' . $file->getClientOriginalExtension();
-    //             $path = $file->storeAs('application_', $filename, 'public');
-    //             $PersonnelData['declaration_signed'] = $path;
-    //         }
-    //         $Personnel = PersonnelCertification::create($PersonnelData);
-
-    //     }else{
-    //         return view('admin.error.404');
-    //     }
-
-    //     return to_route('application.index')->with('success', 'Application Added Successfully');
-    // }
-
-    // public function applicationEdit($id, $category)
-    // {
-    //     // dd($category);
-    //     $scheme_name = $category;
-    //     $application = [];
-    //     $certification = [];
-    //     $medical = [];
-    //     $inspection = [];
-    //     $halal = [];
-    //     $proficiency = [];
-    //     $product = [];
-    //     $personnel = [];
-    //     // dd($category);
-    //     if($category == 'Testing' || $category == 'Calibration' || $category == 'Testing Calibration Laboratoies'){
-    //         $application = ApplicationForLab::where('id', $id)->first();
-
-    //     }elseif($category == 'Certification Bodies'){
-    //         $certification = CertificationBody::where('id', $id)->first();
-
-    //     }elseif($category == 'Medical Laboratories'){
-    //         $medical = MedicalLaboratory::where('id', $id)->first();
-
-    //     }elseif($category == 'Inspection Bodies'){
-    //         $inspection = InspectionBody::where('id', $id)->first();
-
-    //     }elseif($category == 'Halal Certification Bodies'){
-    //         $halal = HalalCertificationBody::where('id', $id)->first();
-
-    //     }elseif($category == 'Proficiency Testing Provider'){
-    //         $proficiency = ProficiencyTesting::where('id', $id)->first();
-
-    //     }elseif($category == 'Product Certification Bodies'){
-    //         $product = ProductCertification::where('id', $id)->first();
-
-    //     }elseif($category == 'Personnel Certification Bodies'){
-    //         $personnel = PersonnelCertification::where('id', $id)->first();
-
-    //     }else{
-    //         return view('admin.error.404');
-    //     }
-
-    //     return view('admin.application.edit', compact('application', 'certification', 'medical', 'inspection', 'halal', 'proficiency', 'product', 'personnel', 'scheme_name'));
-    // }
-
-    // public function applicationShow($id, $category)
-    // {
-    //     // dd($category);
-    //     $scheme_name = $category;
-    //     $application = [];
-    //     $certification = [];
-    //     $medical = [];
-    //     $inspection = [];
-    //     $halal = [];
-    //     $proficiency = [];
-    //     $product = [];
-    //     $personnel = [];
-    //     // dd($category);
-    //     if($category == 'Testing' || $category == 'Calibration' || $category == 'Testing Calibration Laboratoies'){
-    //         $application = ApplicationForLab::where('id', $id)->first();
-
-    //     }elseif($category == 'Certification Bodies'){
-    //         $certification = CertificationBody::where('id', $id)->first();
-
-    //     }elseif($category == 'Medical Laboratories'){
-    //         $medical = MedicalLaboratory::where('id', $id)->first();
-
-    //     }elseif($category == 'Inspection Bodies'){
-    //         $inspection = InspectionBody::where('id', $id)->first();
-
-    //     }elseif($category == 'Halal Certification Bodies'){
-    //         $halal = HalalCertificationBody::where('id', $id)->first();
-
-    //     }elseif($category == 'Proficiency Testing Provider'){
-    //         $proficiency = ProficiencyTesting::where('id', $id)->first();
-
-    //     }elseif($category == 'Product Certification Bodies'){
-    //         $product = ProductCertification::where('id', $id)->first();
-
-    //     }elseif($category == 'Personnel Certification Bodies'){
-    //         $personnel = PersonnelCertification::where('id', $id)->first();
-
-    //     }else{
-    //         return view('admin.error.404');
-    //     }
-
-    //     return view('admin.application.show', compact('application', 'certification', 'medical', 'inspection', 'halal', 'proficiency', 'product', 'personnel', 'scheme_name'));
-    // }
-
-    // public function applicationUpdate(Request $request, $id)
-    // {
-
-    //     if($request->category == 'Testing' || $request->category == 'Calibration' || $request->category == 'Testing Calibration Laboratoies'){
-    //         $applicationData = $request->only((new ApplicationForLab)->getFillable());
-    //         $applicationData['user_id'] = auth()->user()->id;
-    //         $application = ApplicationForLab::where('id', $id)->update($applicationData);
-
-    //     }elseif($request->category == 'Certification Bodies'){
-
-    //         $certificationData = $request->only((new CertificationBody)->getFillable());
-    //         $certificationData['user_id'] = auth()->user()->id;
-    //         $certification = CertificationBody::where('id', $id)->update($certificationData);
-
-    //     }elseif($request->category == 'Medical Laboratories'){
-
-    //         $certificationData = $request->only((new MedicalLaboratory)->getFillable());
-    //         $certificationData['user_id'] = auth()->user()->id;
-    //         $certification = MedicalLaboratory::where('id', $id)->update($certificationData);
-
-    //     }elseif($request->category == 'Inspection Bodies'){
-
-    //         $certificationData = $request->only((new InspectionBody)->getFillable());
-    //         $certificationData['user_id'] = auth()->user()->id;
-    //         $certification = InspectionBody::where('id', $id)->update($certificationData);
-
-    //     }elseif($request->category == 'Halal Certification Bodies'){
-
-    //         $halalData = $request->only((new HalalCertificationBody)->getFillable());
-    //         $halalData['user_id'] = auth()->user()->id;
-    //         $halal = HalalCertificationBody::where('id', $id)->update($halalData);
-
-    //     }elseif($request->category == 'Proficiency Testing Provider'){
-
-    //         $ProficiencyData = $request->only((new ProficiencyTesting)->getFillable());
-    //         $ProficiencyData['user_id'] = auth()->user()->id;
-    //         $Proficiency = ProficiencyTesting::where('id', $id)->update($ProficiencyData);
-
-    //     }elseif($request->category == 'Product Certification Bodies'){
-
-    //         $ProductData = $request->only((new ProductCertification)->getFillable());
-    //         $ProductData['user_id'] = auth()->user()->id;
-    //         $Product = ProductCertification::where('id', $id)->update($ProductData);
-
-    //     }elseif($request->category == 'Personnel Certification Bodies'){
-
-    //         $PersonnelData = $request->only((new PersonnelCertification)->getFillable());
-    //         $Personnel = PersonnelCertification::where('id', $id)->update($PersonnelData);
-
-    //     }else{
-    //         dd('Not Found');
-    //     }
-
-    //     return to_route('application.index')->with('success', 'Application Updated Successfully');
-    // }
-
-    // public function applicationDestroy($id, $category)
-    // {
-
-    //     // dd($id);
-    //     if($category == 'Testing' || $category == 'Calibration' || $category == 'Testing Calibration Laboratoies'){
-    //         $application = ApplicationForLab::find($id);
-    //         $application->delete();
-
-    //     }elseif($category == 'Certification Bodies'){
-
-    //         $certification = CertificationBody::find($id);
-    //         $certification->delete();
-
-    //     }elseif($category == 'Medical Laboratories'){
-    //         $medical = MedicalLaboratory::find($id);
-    //         $medical->delete();
-
-    //     }elseif($category == 'Inspection Bodies'){
-    //         $inspection = InspectionBody::find($id);
-    //         $inspection->delete();
-
-    //     }elseif($category == 'Halal Certification Bodies'){
-    //         $halal = HalalCertificationBody::find($id);
-    //         $halal->delete();
-
-    //     }elseif($category == 'Proficiency Testing Provider'){
-    //         $proficiency = ProficiencyTesting::find($id);
-    //         $proficiency->delete();
-
-    //     }elseif($category == 'Product Certification Bodies'){
-    //         $product = ProductCertification::find($id);
-    //         $product->delete();
-
-    //     }elseif($category == 'Personnel Certification Bodies'){
-    //         $personnel = PersonnelCertification::find($id);
-    //         $personnel->delete();
-    //     }else{
-    //         dd('Not Found');
-    //     }
-
-    //     return to_route('application.index')->with('success', 'Application Deleted Successfully');
-    // }
-
     // Store Document
     public function saveCbSection(Request $request, CbApplication $cbApplication, string $section)
     {
@@ -1330,8 +996,8 @@ class ApplicationController extends Controller
 
         $sectionHandlers = [
             'basic_info' => 'saveCbBasicInfo',
-            // 'body_info' => 'saveCbBodyInfo',
-            // 'accreditation_request' => 'saveCbAccreditationRequest',
+            'body_info' => 'saveCbBodyInfo',
+            'accreditation_request' => 'saveCbAccreditationRequest',
             'about_yourselves' => 'saveCbAboutYourselves',
             'staff_info' => 'saveCbStaffInfo',
             'scope_application' => 'saveCbScopeApplication',
@@ -1345,76 +1011,14 @@ class ApplicationController extends Controller
         return $this->{$sectionHandlers[$section]}($request, $cbApplication);
     }
 
-    // public function uploadCbDocument(Request $request, CbApplication $cbApplication)
-    // {
-    //     abort_unless($cbApplication->created_by === auth()->id(), 403);
-    //     abort_if($cbApplication->status === 'Submitted', 403, 'Submitted applications cannot be edited.');
-
-    //     $data = $request->validate([
-    //         'document_type' => 'required|string|max:100',
-    //         'document_file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:5120',
-    //     ]);
-
-    //     $existing = DB::table('cb_documents')
-    //         ->where('application_id', $cbApplication->id)
-    //         ->where('document_type', $data['document_type'])
-    //         ->first();
-
-    //     if ($existing && Storage::disk('public')->exists($existing->file_path)) {
-    //         Storage::disk('public')->delete($existing->file_path);
-    //     }
-
-    //     $file = $request->file('document_file');
-    //     $safeType = Str::slug($data['document_type']);
-    //     $fileName = $safeType.'_'.now()->format('YmdHis').'.'.$file->getClientOriginalExtension();
-    //     $path = $file->storeAs("applications/certification-bodies/{$cbApplication->id}/{$safeType}", $fileName, 'public');
-
-    //     DB::table('cb_documents')->updateOrInsert(
-    //         [
-    //             'application_id' => $cbApplication->id,
-    //             'document_type' => $data['document_type'],
-    //         ],
-    //         [
-    //             'file_name' => $fileName,
-    //             'original_name' => $file->getClientOriginalName(),
-    //             'file_path' => $path,
-    //             'mime_type' => $file->getMimeType(),
-    //             'uploaded_by' => auth()->id(),
-    //             'updated_at' => now(),
-    //             'created_at' => $existing->created_at ?? now(),
-    //         ]
-    //     );
-
-    //     return back()->with('success', 'Document saved successfully.')->with('open_section', 'documents');
-    // }
-
-    // public function deleteCbDocument(CbApplication $cbApplication, int $document)
-    // {
-    //     abort_unless($cbApplication->created_by === auth()->id(), 403);
-    //     abort_if($cbApplication->status === 'Submitted', 403, 'Submitted applications cannot be edited.');
-
-    //     $row = DB::table('cb_documents')
-    //         ->where('application_id', $cbApplication->id)
-    //         ->where('id', $document)
-    //         ->first();
-
-    //     if ($row && Storage::disk('public')->exists($row->file_path)) {
-    //         Storage::disk('public')->delete($row->file_path);
-    //     }
-
-    //     DB::table('cb_documents')->where('application_id', $cbApplication->id)->where('id', $document)->delete();
-
-    //     return back()->with('success', 'Document deleted successfully.')->with('open_section', 'documents');
-    // }
-
     private function saveCbBasicInfo(Request $request, CbApplication $application)
     {
         $data = $request->validate([
             'scheme_name' => 'required|string|max:255',
             'application_type' => 'required|string|max:255',
             'application_no' => 'nullable|string|max:255',
-            'organization_name' => 'required|string|max:255',
-            'accreditation_type' => 'nullable|string|max:255',
+            // 'organization_name' => 'required|string|max:255',
+            // 'accreditation_type' => 'nullable|string|max:255',
         ]);
 
         $application->update(array_merge($data, ['status' => 'Draft']));
@@ -1577,18 +1181,18 @@ class ApplicationController extends Controller
 
     private function validateCbFinalSubmission(CbApplication $application): void
     {
-        $requiredDocuments = [
-            'Quality Manual',
-            'Quality Procedures',
-            'Staff List',
-            'Certified Organizations List',
-            'Applicant Fee Evidence',
-            'Legal Entity Proof',
-            'F-02/29 Form',
-        ];
+        // $requiredDocuments = [
+        //     'Quality Manual',
+        //     'Quality Procedures',
+        //     'Staff List',
+        //     'Certified Organizations List',
+        //     'Applicant Fee Evidence',
+        //     'Legal Entity Proof',
+        //     'F-02/29 Form',
+        // ];
 
-        $uploaded = DB::table('cb_documents')->where('application_id', $application->id)->pluck('document_type')->all();
-        $missingDocuments = array_diff($requiredDocuments, $uploaded);
+        // $uploaded = DB::table('cb_documents')->where('application_id', $application->id)->pluck('document_type')->all();
+        // $missingDocuments = array_diff($requiredDocuments, $uploaded);
 
         $requiredTables = [
             'cb_contacts' => 'Certification Body Information',
@@ -1605,9 +1209,9 @@ class ApplicationController extends Controller
             }
         }
 
-        if ($missingDocuments || $missing) {
-            abort(422, 'Complete missing sections/documents before submission: '.implode(', ', array_merge($missing, $missingDocuments)));
-        }
+        // if ($missingDocuments || $missing) {
+        //     abort(422, 'Complete missing sections/documents before submission: '.implode(', ', array_merge($missing, $missingDocuments)));
+        // }
     }
 
     private function replaceRows(string $table, int $applicationId, array $rows): void
@@ -1642,35 +1246,35 @@ class ApplicationController extends Controller
         return back()->with('success', $message)->with('open_section', $section);
     }
 
-    public function documentStore(Request $request)
-    {
-        // dd($request->all());
-        // $request->validate([
-        //     'document_id' => 'required|integer',
-        //     // 'category' => 'required|string',
-        //     'name' => 'required|string',
-        //     'number' => 'required|string',
-        //     'upload_doc' => 'required|file|mimes:pdf,jpg,png,docx|max:2048',
-        // ]);
+    // public function documentStore(Request $request)
+    // {
+    //     // dd($request->all());
+    //     // $request->validate([
+    //     //     'document_id' => 'required|integer',
+    //     //     // 'category' => 'required|string',
+    //     //     'name' => 'required|string',
+    //     //     'number' => 'required|string',
+    //     //     'upload_doc' => 'required|file|mimes:pdf,jpg,png,docx|max:2048',
+    //     // ]);
 
-        if ($request->hasFile('upload_doc')) {
-            $file = $request->file('upload_doc');
-            $filename = date('dmy').'_sign_'.time().'.'.$file->getClientOriginalExtension();
-            $path = $file->storeAs('Documents_', $filename, 'public');
-        }
-        $usr_id = auth()->user()->id;
+    //     if ($request->hasFile('upload_doc')) {
+    //         $file = $request->file('upload_doc');
+    //         $filename = date('dmy').'_sign_'.time().'.'.$file->getClientOriginalExtension();
+    //         $path = $file->storeAs('Documents_', $filename, 'public');
+    //     }
+    //     $usr_id = auth()->user()->id;
 
-        DocumentDetail::create([
-            'document_id' => $request->document_id,
-            'category' => $request->category,
-            'name' => $request->name,
-            'number' => $request->number,
-            'upload_doc' => $path,
-            'user_id' => $usr_id,
-        ]);
+    //     DocumentDetail::create([
+    //         'document_id' => $request->document_id,
+    //         'category' => $request->category,
+    //         'name' => $request->name,
+    //         'number' => $request->number,
+    //         'upload_doc' => $path,
+    //         'user_id' => $usr_id,
+    //     ]);
 
-        return response()->json(['success' => true, 'message' => 'Document created successfully']);
-    }
+    //     return response()->json(['success' => true, 'message' => 'Document created successfully']);
+    // }
 
     private function loadMedicalLaboratoryData(MlabApplication $application): array
     {
@@ -1738,9 +1342,9 @@ class ApplicationController extends Controller
             ->first();
 
         // Documents (Step 7)
-        $documents = DB::table('mlab_documents')
-            ->where('mlab_application_id', $application->id)
-            ->get();
+        // $documents = DB::table('mlab_documents')
+        //     ->where('mlab_application_id', $application->id)
+        //     ->get();
 
         // Build saved sections status
         $savedSections = [
@@ -1750,7 +1354,7 @@ class ApplicationController extends Controller
             'step4' => (bool) $calibrationSystem || (bool) $isoCompliance,
             'step5' => $otherApprovals->isNotEmpty(),
             'step6' => (bool) $declaration,
-            'step7' => $documents->isNotEmpty() || $application->status === 'submitted',
+            // 'step7' => $documents->isNotEmpty() || $application->status === 'submitted',
         ];
 
         return [
@@ -1766,7 +1370,7 @@ class ApplicationController extends Controller
             'iso_compliance' => $isoCompliance,
             'other_approvals' => $otherApprovals,
             'declaration' => $declaration,
-            'documents' => $documents,
+            // 'documents' => $documents,
             'saved_sections' => $savedSections,
         ];
     }
@@ -1786,14 +1390,6 @@ class ApplicationController extends Controller
             DB::table($table)->insert($this->timestamps(array_merge($row, ['mlab_application_id' => $applicationId])));
         }
     }
-
-    /**
-     * Helper to add timestamps
-     */
-    // private function timestamps(array $data): array
-    // {
-    //     return array_merge($data, ['created_at' => now(), 'updated_at' => now()]);
-    // }
 
     /**
      * Response helper for MLab sections
@@ -2161,15 +1757,15 @@ class ApplicationController extends Controller
 
     private function validateMlabFinalSubmission(MlabApplication $mlabApplication): void
     {
-        $requiredDocuments = [
-            'Quality Manual',
-            'Standard Operating Procedures',
-            'PT Participation Evidence',
-            'PT Plan',
-            'Agreement Form',
-            'Filled Form',
-            'Applicant Fee Evidence',
-        ];
+        // $requiredDocuments = [
+        //     'Quality Manual',
+        //     'Standard Operating Procedures',
+        //     'PT Participation Evidence',
+        //     'PT Plan',
+        //     'Agreement Form',
+        //     'Filled Form',
+        //     'Applicant Fee Evidence',
+        // ];
 
         $requiredChecks = [
             'Step 1' => DB::table('mlab_step1_organisation')->where('mlab_application_id', $mlabApplication->id)->exists(),
@@ -2195,69 +1791,63 @@ class ApplicationController extends Controller
                 $missing[] = $label;
             }
         }
-
-        $missingDocuments = array_diff($requiredDocuments, $uploaded);
-
-        if ($missing || $missingDocuments) {
-            abort(422, 'Complete missing sections/documents before submission: '.implode(', ', array_merge($missing, $missingDocuments)));
-        }
     }
 
-    public function uploadMlabDocument(Request $request, MlabApplication $application)
-    {
-        $data = $request->validate([
-            'document_type' => 'required|string|max:100',
-            'document_file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:5120',
-        ]);
+    // public function uploadMlabDocument(Request $request, MlabApplication $application)
+    // {
+    //     $data = $request->validate([
+    //         'document_type' => 'required|string|max:100',
+    //         'document_file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:5120',
+    //     ]);
 
-        $existing = DB::table('mlab_documents')
-            ->where('mlab_application_id', $application->id)
-            ->where('document_type', $data['document_type'])
-            ->first();
+    //     $existing = DB::table('mlab_documents')
+    //         ->where('mlab_application_id', $application->id)
+    //         ->where('document_type', $data['document_type'])
+    //         ->first();
 
-        if ($existing && Storage::disk('public')->exists($existing->file_path)) {
-            Storage::disk('public')->delete($existing->file_path);
-        }
+    //     if ($existing && Storage::disk('public')->exists($existing->file_path)) {
+    //         Storage::disk('public')->delete($existing->file_path);
+    //     }
 
-        $file = $request->file('document_file');
-        $safeType = Str::slug($data['document_type']);
-        $fileName = $safeType.'_'.now()->format('YmdHis').'.'.$file->getClientOriginalExtension();
-        $path = $file->storeAs("applications/medical-laboratory/{$application->id}/{$safeType}", $fileName, 'public');
+    //     $file = $request->file('document_file');
+    //     $safeType = Str::slug($data['document_type']);
+    //     $fileName = $safeType.'_'.now()->format('YmdHis').'.'.$file->getClientOriginalExtension();
+    //     $path = $file->storeAs("applications/medical-laboratory/{$application->id}/{$safeType}", $fileName, 'public');
 
-        DB::table('mlab_documents')->updateOrInsert(
-            [
-                'mlab_application_id' => $application->id,
-                'document_type' => $data['document_type'],
-            ],
-            [
-                'file_name' => $fileName,
-                'original_name' => $file->getClientOriginalName(),
-                'file_path' => $path,
-                'mime_type' => $file->getMimeType(),
-                'uploaded_by' => auth()->id(),
-                'updated_at' => now(),
-                'created_at' => $existing->created_at ?? now(),
-            ]
-        );
+    //     DB::table('mlab_documents')->updateOrInsert(
+    //         [
+    //             'mlab_application_id' => $application->id,
+    //             'document_type' => $data['document_type'],
+    //         ],
+    //         [
+    //             'file_name' => $fileName,
+    //             'original_name' => $file->getClientOriginalName(),
+    //             'file_path' => $path,
+    //             'mime_type' => $file->getMimeType(),
+    //             'uploaded_by' => auth()->id(),
+    //             'updated_at' => now(),
+    //             'created_at' => $existing->created_at ?? now(),
+    //         ]
+    //     );
 
-        return back()->with('success', 'Document uploaded successfully.')->with('open_section', 'step7');
-    }
+    //     return back()->with('success', 'Document uploaded successfully.')->with('open_section', 'step7');
+    // }
 
-    public function deleteMlabDocument(MlabApplication $application, int $document)
-    {
-        $row = DB::table('mlab_documents')
-            ->where('mlab_application_id', $application->id)
-            ->where('id', $document)
-            ->first();
+    // public function deleteMlabDocument(MlabApplication $application, int $document)
+    // {
+    //     $row = DB::table('mlab_documents')
+    //         ->where('mlab_application_id', $application->id)
+    //         ->where('id', $document)
+    //         ->first();
 
-        if ($row && Storage::disk('public')->exists($row->file_path)) {
-            Storage::disk('public')->delete($row->file_path);
-        }
+    //     if ($row && Storage::disk('public')->exists($row->file_path)) {
+    //         Storage::disk('public')->delete($row->file_path);
+    //     }
 
-        DB::table('mlab_documents')->where('id', $document)->delete();
+    //     DB::table('mlab_documents')->where('id', $document)->delete();
 
-        return back()->with('success', 'Document deleted successfully.')->with('open_section', 'step7');
-    }
+    //     return back()->with('success', 'Document deleted successfully.')->with('open_section', 'step7');
+    // }
 
     public function submitedApplication()
     {
@@ -2337,3 +1927,291 @@ class ApplicationController extends Controller
         return view('admin.application.certification.show.certification_bodies_show', compact('application'));
     }
 }
+// public function applicationStore(Request $request)
+// {
+//     // dd($request->category);
+
+//     if($request->category == 'Testing' || $request->category == 'Calibration' || $request->category == 'Testing Calibration Laboratoies'){
+//         $applicationData = $request->only((new ApplicationForLab)->getFillable());
+//         $applicationData['user_id'] = auth()->user()->id;
+//         if ($request->hasFile('signed')) {
+//             $image = $request->file('signed');
+//             $timestamp = now()->format('Ymd_His');
+//             $filename = 'application_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
+//             $path = $image->storeAs('applications', $filename, 'public');
+//             $applicationData['signed'] = $path;
+//         }
+//         $application = ApplicationForLab::create($applicationData);
+
+//     }elseif($request->category == 'Certification Bodies'){
+//         $certificationData = $request->only((new CertificationBody)->getFillable());
+//         $certificationData['user_id'] = auth()->user()->id;
+//         if ($request->hasFile('signed')) {
+//             $image = $request->file('signed');
+//             $timestamp = now()->format('Ymd_His');
+//             $filename = 'application_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
+//             $path = $image->storeAs('applications', $filename, 'public');
+//             $certificationData['signed'] = $path;
+//         }
+//         $certification = CertificationBody::create($certificationData);
+
+//     }elseif($request->category == 'Medical Laboratories'){
+//         $medicalData = $request->only((new MedicalLaboratory)->getFillable());
+//         $medicalData['user_id'] = auth()->user()->id;
+//         $medical = MedicalLaboratory::create($medicalData);
+
+//     }elseif($request->category == 'Inspection Bodies'){
+//         $inspectionData = $request->only((new InspectionBody)->getFillable());
+//         $inspectionData['user_id'] = auth()->user()->id;
+//         if ($request->hasFile('declaration_signed')) {
+//             $image = $request->file('declaration_signed');
+//             $timestamp = now()->format('Ymd_His');
+//             $filename = 'application_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
+//             $path = $image->storeAs('applications', $filename, 'public');
+//             $inspectionData['declaration_signed'] = $path;
+//         }
+//         $inspection = InspectionBody::create($inspectionData);
+
+//     }elseif($request->category == 'Halal Certification Bodies'){
+//         $halalData = $request->only((new HalalCertificationBody)->getFillable());
+//         $halalData['user_id'] = auth()->user()->id;
+//         if ($request->hasFile('declaration_signed')) {
+//             $image = $request->file('declaration_signed');
+//             $timestamp = now()->format('Ymd_His');
+//             $filename = 'application_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
+//             $path = $image->storeAs('applications', $filename, 'public');
+//             $halalData['declaration_signed'] = $path;
+//         }
+//         $halal = HalalCertificationBody::create($halalData);
+
+//     }elseif($request->category == 'Proficiency Testing Provider'){
+//         // dd('ok');
+//         $ProficiencyData = $request->only((new ProficiencyTesting)->getFillable());
+//         $ProficiencyData['user_id'] = auth()->user()->id;
+//         if ($request->hasFile('declaration_signed')) {
+//             $image = $request->file('declaration_signed');
+//             $timestamp = now()->format('Ymd_His');
+//             $filename = 'application_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
+//             $path = $image->storeAs('applications', $filename, 'public');
+//             $ProficiencyData['declaration_signed'] = $path;
+//         }
+//         $Proficiency = ProficiencyTesting::create($ProficiencyData);
+
+//     }elseif($request->category == 'Product Certification Bodies'){
+//         // dd('ok');
+//         $ProductData = $request->only((new ProductCertification)->getFillable());
+//         $ProductData['user_id'] = auth()->user()->id;
+//         if ($request->hasFile('declaration_signed')) {
+//             $image = $request->file('declaration_signed');
+//             $timestamp = now()->format('Ymd_His');
+//             $filename = 'application_' . auth()->id() . '_' . $timestamp . '.' . $image->getClientOriginalExtension();
+//             $path = $image->storeAs('applications', $filename, 'public');
+//             $ProductData['declaration_signed'] = $path;
+//         }
+//         $Product = ProductCertification::create($ProductData);
+
+//     }elseif($request->category == 'Personnel Certification Bodies'){
+//         // dd('ok');
+//         $PersonnelData = $request->only((new PersonnelCertification)->getFillable());
+//         $PersonnelData['user_id'] = auth()->user()->id;
+//         if ($request->hasFile('declaration_signed')) {
+//             $file = $request->file('declaration_signed');
+//             $filename = date('dmy') . '_sign_' . time() . '.' . $file->getClientOriginalExtension();
+//             $path = $file->storeAs('application_', $filename, 'public');
+//             $PersonnelData['declaration_signed'] = $path;
+//         }
+//         $Personnel = PersonnelCertification::create($PersonnelData);
+
+//     }else{
+//         return view('admin.error.404');
+//     }
+
+//     return to_route('application.index')->with('success', 'Application Added Successfully');
+// }
+
+// public function applicationEdit($id, $category)
+// {
+//     // dd($category);
+//     $scheme_name = $category;
+//     $application = [];
+//     $certification = [];
+//     $medical = [];
+//     $inspection = [];
+//     $halal = [];
+//     $proficiency = [];
+//     $product = [];
+//     $personnel = [];
+//     // dd($category);
+//     if($category == 'Testing' || $category == 'Calibration' || $category == 'Testing Calibration Laboratoies'){
+//         $application = ApplicationForLab::where('id', $id)->first();
+
+//     }elseif($category == 'Certification Bodies'){
+//         $certification = CertificationBody::where('id', $id)->first();
+
+//     }elseif($category == 'Medical Laboratories'){
+//         $medical = MedicalLaboratory::where('id', $id)->first();
+
+//     }elseif($category == 'Inspection Bodies'){
+//         $inspection = InspectionBody::where('id', $id)->first();
+
+//     }elseif($category == 'Halal Certification Bodies'){
+//         $halal = HalalCertificationBody::where('id', $id)->first();
+
+//     }elseif($category == 'Proficiency Testing Provider'){
+//         $proficiency = ProficiencyTesting::where('id', $id)->first();
+
+//     }elseif($category == 'Product Certification Bodies'){
+//         $product = ProductCertification::where('id', $id)->first();
+
+//     }elseif($category == 'Personnel Certification Bodies'){
+//         $personnel = PersonnelCertification::where('id', $id)->first();
+
+//     }else{
+//         return view('admin.error.404');
+//     }
+
+//     return view('admin.application.edit', compact('application', 'certification', 'medical', 'inspection', 'halal', 'proficiency', 'product', 'personnel', 'scheme_name'));
+// }
+
+// public function applicationShow($id, $category)
+// {
+//     // dd($category);
+//     $scheme_name = $category;
+//     $application = [];
+//     $certification = [];
+//     $medical = [];
+//     $inspection = [];
+//     $halal = [];
+//     $proficiency = [];
+//     $product = [];
+//     $personnel = [];
+//     // dd($category);
+//     if($category == 'Testing' || $category == 'Calibration' || $category == 'Testing Calibration Laboratoies'){
+//         $application = ApplicationForLab::where('id', $id)->first();
+
+//     }elseif($category == 'Certification Bodies'){
+//         $certification = CertificationBody::where('id', $id)->first();
+
+//     }elseif($category == 'Medical Laboratories'){
+//         $medical = MedicalLaboratory::where('id', $id)->first();
+
+//     }elseif($category == 'Inspection Bodies'){
+//         $inspection = InspectionBody::where('id', $id)->first();
+
+//     }elseif($category == 'Halal Certification Bodies'){
+//         $halal = HalalCertificationBody::where('id', $id)->first();
+
+//     }elseif($category == 'Proficiency Testing Provider'){
+//         $proficiency = ProficiencyTesting::where('id', $id)->first();
+
+//     }elseif($category == 'Product Certification Bodies'){
+//         $product = ProductCertification::where('id', $id)->first();
+
+//     }elseif($category == 'Personnel Certification Bodies'){
+//         $personnel = PersonnelCertification::where('id', $id)->first();
+
+//     }else{
+//         return view('admin.error.404');
+//     }
+
+//     return view('admin.application.show', compact('application', 'certification', 'medical', 'inspection', 'halal', 'proficiency', 'product', 'personnel', 'scheme_name'));
+// }
+
+// public function applicationUpdate(Request $request, $id)
+// {
+
+//     if($request->category == 'Testing' || $request->category == 'Calibration' || $request->category == 'Testing Calibration Laboratoies'){
+//         $applicationData = $request->only((new ApplicationForLab)->getFillable());
+//         $applicationData['user_id'] = auth()->user()->id;
+//         $application = ApplicationForLab::where('id', $id)->update($applicationData);
+
+//     }elseif($request->category == 'Certification Bodies'){
+
+//         $certificationData = $request->only((new CertificationBody)->getFillable());
+//         $certificationData['user_id'] = auth()->user()->id;
+//         $certification = CertificationBody::where('id', $id)->update($certificationData);
+
+//     }elseif($request->category == 'Medical Laboratories'){
+
+//         $certificationData = $request->only((new MedicalLaboratory)->getFillable());
+//         $certificationData['user_id'] = auth()->user()->id;
+//         $certification = MedicalLaboratory::where('id', $id)->update($certificationData);
+
+//     }elseif($request->category == 'Inspection Bodies'){
+
+//         $certificationData = $request->only((new InspectionBody)->getFillable());
+//         $certificationData['user_id'] = auth()->user()->id;
+//         $certification = InspectionBody::where('id', $id)->update($certificationData);
+
+//     }elseif($request->category == 'Halal Certification Bodies'){
+
+//         $halalData = $request->only((new HalalCertificationBody)->getFillable());
+//         $halalData['user_id'] = auth()->user()->id;
+//         $halal = HalalCertificationBody::where('id', $id)->update($halalData);
+
+//     }elseif($request->category == 'Proficiency Testing Provider'){
+
+//         $ProficiencyData = $request->only((new ProficiencyTesting)->getFillable());
+//         $ProficiencyData['user_id'] = auth()->user()->id;
+//         $Proficiency = ProficiencyTesting::where('id', $id)->update($ProficiencyData);
+
+//     }elseif($request->category == 'Product Certification Bodies'){
+
+//         $ProductData = $request->only((new ProductCertification)->getFillable());
+//         $ProductData['user_id'] = auth()->user()->id;
+//         $Product = ProductCertification::where('id', $id)->update($ProductData);
+
+//     }elseif($request->category == 'Personnel Certification Bodies'){
+
+//         $PersonnelData = $request->only((new PersonnelCertification)->getFillable());
+//         $Personnel = PersonnelCertification::where('id', $id)->update($PersonnelData);
+
+//     }else{
+//         dd('Not Found');
+//     }
+
+//     return to_route('application.index')->with('success', 'Application Updated Successfully');
+// }
+
+// public function applicationDestroy($id, $category)
+// {
+
+//     // dd($id);
+//     if($category == 'Testing' || $category == 'Calibration' || $category == 'Testing Calibration Laboratoies'){
+//         $application = ApplicationForLab::find($id);
+//         $application->delete();
+
+//     }elseif($category == 'Certification Bodies'){
+
+//         $certification = CertificationBody::find($id);
+//         $certification->delete();
+
+//     }elseif($category == 'Medical Laboratories'){
+//         $medical = MedicalLaboratory::find($id);
+//         $medical->delete();
+
+//     }elseif($category == 'Inspection Bodies'){
+//         $inspection = InspectionBody::find($id);
+//         $inspection->delete();
+
+//     }elseif($category == 'Halal Certification Bodies'){
+//         $halal = HalalCertificationBody::find($id);
+//         $halal->delete();
+
+//     }elseif($category == 'Proficiency Testing Provider'){
+//         $proficiency = ProficiencyTesting::find($id);
+//         $proficiency->delete();
+
+//     }elseif($category == 'Product Certification Bodies'){
+//         $product = ProductCertification::find($id);
+//         $product->delete();
+
+//     }elseif($category == 'Personnel Certification Bodies'){
+//         $personnel = PersonnelCertification::find($id);
+//         $personnel->delete();
+//     }else{
+//         dd('Not Found');
+//     }
+
+//     return to_route('application.index')->with('success', 'Application Deleted Successfully');
+// }

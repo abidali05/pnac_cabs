@@ -1119,14 +1119,14 @@
                 {{-- ========================================================== --}}
                 {{-- STEP 6: Declaration                                        --}}
                 {{-- ========================================================== --}}
-                @php $declaration = $mlabData['declaration'] ?? null; @endphp
+
                 @php
-                    $declarationAppTypes = is_array($declaration->application_types ?? [])
-                        ? $declaration->application_types
-                        : [];
-                    $declarationAppTypes = json_decode($declaration->application_types ?? '[]', true);
-                    if (!is_array($declarationAppTypes)) {
-                        $declarationAppTypes = [];
+                    $declaration = $mlabData['declaration'] ?? null;
+                    // Safely get application types array
+                    $declarationAppTypes = [];
+                    if ($declaration && isset($declaration->application_types)) {
+                        $decoded = json_decode($declaration->application_types, true);
+                        $declarationAppTypes = is_array($decoded) ? $decoded : [];
                     }
                 @endphp
                 <div class="border rounded p-3 p-md-4 mb-3 bg-white pnac-step-card" data-section="step6"
@@ -1136,8 +1136,9 @@
                             <h5 class="mb-1">Step 6: Declaration</h5>
                             <p class="text-muted mb-0">Application type, agreement, fee, and final submission.</p>
                         </div>
-                        <span
-                            class="badge {{ $isSaved('step6') ? 'bg-success' : 'bg-warning text-dark' }}">{{ $isSaved('step6') ? 'Saved' : 'Unsaved' }}</span>
+                        <span class="badge {{ $isSaved('step6') ? 'bg-success' : 'bg-warning text-dark' }}">
+                            {{ $isSaved('step6') ? 'Saved' : 'Unsaved' }}
+                        </span>
                     </div>
                     @if ($isEditing('step6'))
                         <form method="POST" action="{{ $sectionUrl('step6') }}" class="js-card-form mlab-js-card-form">
@@ -1153,7 +1154,6 @@
                                                     <input class="form-check-input" type="checkbox"
                                                         name="application_types[]" value="{{ $type }}"
                                                         @if (in_array($type, old('application_types', $declarationAppTypes))) checked @endif>
-                                                    {{-- @if (is_array(old('application_types', $declaration->application_types ?? [])) && in_array($type, old('application_types', $declaration->application_types ?? []))) checked @endif> --}}
                                                     <label class="form-check-label">{{ $type }}</label>
                                                 </div>
                                             </div>
@@ -1174,20 +1174,23 @@
                                 <div class="col-md-12">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="agreement_accepted"
-                                            value="1" @checked($declaration->agreement_accepted ?? false) required>
+                                            value="1" @checked($declaration && $declaration->agreement_accepted ?? false) required>
                                         <label class="form-check-label">I agree to the terms and conditions.</label>
                                     </div>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Applicant Fee (PKR)</label><input
-                                        class="form-control" name="fee"
-                                        value="{{ old('fee', $declaration->fee ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">Signed By</label><input
-                                        class="form-control" name="signed_by"
-                                        value="{{ old('signed_by', $declaration->signed_by ?? '') }}" required></div>
-                                <div class="col-md-4"><label class="form-label">Signed Date</label><input type="date"
-                                        class="form-control" name="signed_date"
+                                <div class="col-md-4"><label class="form-label">Applicant Fee (PKR)</label>
+                                    <input class="form-control" name="fee"
+                                        value="{{ old('fee', $declaration->fee ?? '') }}">
+                                </div>
+                                <div class="col-md-4"><label class="form-label">Signed By</label>
+                                    <input class="form-control" name="signed_by"
+                                        value="{{ old('signed_by', $declaration->signed_by ?? '') }}" required>
+                                </div>
+                                <div class="col-md-4"><label class="form-label">Signed Date</label>
+                                    <input type="date" class="form-control" name="signed_date"
                                         value="{{ old('signed_date', $declaration->signed_date ?? now()->format('Y-m-d')) }}"
-                                        required></div>
+                                        required>
+                                </div>
                             </div>
                             <div class="d-flex justify-content-end gap-2 mt-3">
                                 <button class="btn btn-success btn-sm">Save Draft</button>
@@ -1196,21 +1199,26 @@
                             </div>
                         </form>
                     @else
+                        {{-- View Mode --}}
                         @php
-                            $appTypesList = is_array($declaration->application_types ?? [])
-                                ? implode(', ', $declaration->application_types)
-                                : '-';
+                            // Safely get app types list
+                            $appTypesList = '-';
+                            if ($declaration && isset($declaration->application_types)) {
+                                $decoded = json_decode($declaration->application_types, true);
+                                $appTypesList = is_array($decoded) ? implode(', ', $decoded) : '-';
+                            }
                             $renderDetails([
                                 'Application Types' => $appTypesList,
                                 'Other Type' => $declaration->other_type ?? '-',
-                                'Agreement Accepted' => $declaration->agreement_accepted ?? false ? 'Yes' : 'No',
+                                'Agreement Accepted' => $declaration && $declaration->agreement_accepted ? 'Yes' : 'No',
                                 'Applicant Fee' => $declaration->fee ?? '-',
                                 'Signed By' => $declaration->signed_by ?? '-',
                                 'Signed Date' => $declaration->signed_date ?? '-',
                             ]);
                         @endphp
-                        <div class="d-flex justify-content-end mt-3"><a href="{{ $editUrl('step6') }}"
-                                class="btn btn-outline-success btn-sm">Edit</a></div>
+                        <div class="d-flex justify-content-end mt-3">
+                            <a href="{{ $editUrl('step6') }}" class="btn btn-outline-success btn-sm">Edit</a>
+                        </div>
                     @endif
                 </div>
             </div>
@@ -1455,7 +1463,4 @@
             });
         });
     </script>
-    {{-- <script src="{{ asset('admin/js/medical-laboratory.js') }}"></script> --}}
-
-    {{-- Medical Laboratory specific JS (Add/Remove, AJAX, etc.) --}}
 @endsection

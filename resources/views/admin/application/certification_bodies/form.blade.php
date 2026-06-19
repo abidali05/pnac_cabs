@@ -160,13 +160,7 @@
                         <div class="col-md-4"><label class="form-label">Application Number</label><input
                                 class="form-control" name="application_no"
                                 value="{{ old('application_no', $cbApplication->application_no) }}" readonly></div>
-                        <div class="col-md-6"><label class="form-label">Applicant Organization Name</label><input
-                                class="form-control" name="organization_name"
-                                value="{{ old('organization_name', $cbApplication->organization_name) }}" required>
-                        </div>
-                        <div class="col-md-6"><label class="form-label">Accreditation Type</label><input
-                                class="form-control" name="accreditation_type"
-                                value="{{ old('accreditation_type', $cbApplication->accreditation_type) }}"></div>
+
                         <div class="col-md-4"><label class="form-label">Status</label><input class="form-control"
                                 value="{{ $cbApplication->status }}" readonly></div>
                         <div class="col-md-4"><label class="form-label">Created By</label><input class="form-control"
@@ -175,8 +169,9 @@
                         <div class="col-md-4"><label class="form-label">Created Date</label><input class="form-control"
                                 value="{{ optional($cbApplication->created_at)->format('Y-m-d') }}" readonly></div>
                     </div>
-                    <div class="d-flex justify-content-end mt-3"><button class="btn btn-success btn-sm">Save
-                            Draft</button></div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button class="btn btn-success btn-sm" type="submit">Save Draft</button>
+                    </div>
                 </form>
             @else
                 @php
@@ -184,8 +179,8 @@
                         'Scheme Name' => $cbApplication->scheme_name,
                         'Application Type' => $cbApplication->application_type,
                         'Application Number' => $cbApplication->application_no,
-                        'Applicant Organization Name' => $cbApplication->organization_name,
-                        'Accreditation Type' => $cbApplication->accreditation_type,
+                        // 'Applicant Organization Name' => $cbApplication->organization_name,
+                        // 'Accreditation Type' => $cbApplication->accreditation_type,
                         'Status' => $cbApplication->status,
                         'Created By' => optional($cbApplication->creator)->name ?? auth()->user()->name,
                         'Created Date' => optional($cbApplication->created_at)->format('Y-m-d'),
@@ -244,8 +239,7 @@
                                 name="parent_organization[ownership_other_description]"
                                 value="{{ $parent->ownership_other_description ?? '' }}"></div>
                         <div class="col-md-4"><label class="form-label">Main Activity?</label><select
-                                class="form-control cb-main-activity-select"
-                                name="parent_organization[main_activity]">
+                                class="form-control cb-main-activity-select" name="parent_organization[main_activity]">
                                 <option value="">Select</option>
                                 <option value="yes" @selected(($parent->main_activity ?? '') === 'yes')>Yes</option>
                                 <option value="no" @selected(($parent->main_activity ?? '') === 'no')>No</option>
@@ -435,9 +429,9 @@
             $qualityComplies =
                 optional(
                     $nonComplianceRows instanceof \Illuminate\Support\Collection
-                        ? $nonComplianceRows->firstWhere(fn($r) => !empty($r->complies))->complies
-                        : null,
-                )->__invoke() ?? 'yes';
+                        ? $nonComplianceRows->first()
+                        : $nonComplianceRows,
+                )->complies ?? 'yes';
 
             if ($nonComplianceRows instanceof \Illuminate\Support\Collection) {
                 $qualityComplies =
