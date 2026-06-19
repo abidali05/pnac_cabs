@@ -206,7 +206,7 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <span class="badge bg-success">{{ $application->status }}</span>
-                    <span class="badge bg-light text-dark">{{ $application->application_no ?: 'Draft' }}</span>
+                    {{-- <span class="badge bg-light text-dark">{{ $application->application_no ?: 'Draft' }}</span> --}}
                 </div>
             </div>
 

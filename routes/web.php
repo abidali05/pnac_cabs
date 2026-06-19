@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\admin\ApplicationController;
 use App\Http\Controllers\CertificationBodies\InspectionBodyController;
+use App\Http\Controllers\HalalCertification\HalalCertificationBodyController;
 use App\Http\Controllers\admin\AssessmentController;
 use App\Http\Controllers\admin\ClientSatisficationController;
 use App\Http\Controllers\admin\SchemeController;
@@ -146,6 +147,20 @@ Route::middleware('auth')->group(function () {
         });
         // Scheme
         Route::resource('scheme', SchemeController::class);
+
+        // Halal Certification Body Accreditation (F-01/17)
+        Route::prefix('halal-certification-body')->as('hcb.')->group(function () {
+            Route::get('create', [HalalCertificationBodyController::class, 'create'])->name('create');
+            Route::post('{application}/step1', [HalalCertificationBodyController::class, 'saveStep1'])->name('step1.save');
+            Route::post('{application}/step2', [HalalCertificationBodyController::class, 'saveStep2'])->name('step2.save');
+            Route::post('{application}/step3', [HalalCertificationBodyController::class, 'saveStep3'])->name('step3.save');
+            Route::post('{application}/step4', [HalalCertificationBodyController::class, 'saveStep4'])->name('step4.save');
+            Route::post('{application}/step5', [HalalCertificationBodyController::class, 'saveStep5'])->name('step5.save');
+            Route::post('{application}/step6', [HalalCertificationBodyController::class, 'saveStep6'])->name('step6.save');
+            Route::post('{application}/step7', [HalalCertificationBodyController::class, 'saveStep7'])->name('step7.save');
+            Route::post('{application}/documents', [HalalCertificationBodyController::class, 'uploadDocument'])->name('documents.store');
+            Route::delete('{application}/documents/{document}', [HalalCertificationBodyController::class, 'deleteDocument'])->name('documents.destroy');
+        });
 
         // Inspection Body Accreditation (F-01/10 / ISO/IEC 17020)
         Route::prefix('inspection-body')->as('inspection-body.')->group(function () {
