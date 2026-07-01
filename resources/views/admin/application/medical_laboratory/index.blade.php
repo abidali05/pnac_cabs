@@ -258,6 +258,212 @@
         : collect([$fallback]);
     $value = fn($row, string $field) => is_array($row) ? $row[$field] ?? '' : $row->{$field} ?? '';
 
+    // Load existing form schema dynamically
+    $form = $form ?? \App\Models\ApplicationForm::where('application_name', $scheme_name)
+        ->orWhere('slug', \Str::slug($scheme_name))
+        ->first();
+    $schema = $form?->form_schema;
+
+    $getSection = function ($titleOrIndex) use ($schema) {
+        if (!$schema || !isset($schema['sections'])) {
+            return null;
+        }
+        if (is_int($titleOrIndex)) {
+            return $schema['sections'][$titleOrIndex] ?? null;
+        }
+        foreach ($schema['sections'] as $sec) {
+            if (strcasecmp($sec['title'] ?? '', $titleOrIndex) === 0) {
+                return $sec;
+            }
+        }
+        return null;
+    };
+
+    $fieldIndexMap = [
+        'About Yourselves' => [
+            'organisation_name' => 0,
+            'lab_address' => 1,
+            'title' => 2,
+            'contact_name' => 3,
+            'contact_designation' => 4,
+            'parent_organisation' => 5,
+            'parent_relationship' => 6,
+            'parent_address' => 7,
+            'parent_tel' => 8,
+            'parent_fax' => 9,
+            'invoice_organisation' => 10,
+            'invoice_address' => 11,
+            'invoice_postcode' => 12,
+            'invoice_tel' => 13,
+            'invoice_fax' => 14,
+            'ownership_type' => 15,
+            'registration_no' => 16,
+            'ownership_other_description' => 17,
+            'testing_main_activity' => 18,
+            'main_activity_description' => 19,
+            'consultant_name' => 20,
+            'consultant_organisation' => 21,
+            'consultant_address' => 22,
+            'consultant_postcode' => 23,
+            'consultant_tel' => 24,
+            'consultant_fax' => 25,
+            'consultant_email' => 26,
+            'facility_permanent' => 27,
+            'facility_sample_collection' => 28,
+            'facility_temporary' => 29,
+            'facility_mobile' => 30,
+            'sample_collection_list' => 31,
+            'fields_of_testing' => 32,
+            'other_field' => 33,
+        ],
+        'Technical Management' => [
+            'department' => 0,
+            'name_designation' => 1,
+            'qualification' => 2,
+            'experience' => 3,
+            'training' => 4,
+            'authorized_area' => 5,
+            'signature' => 6,
+        ],
+        'Quality Manager' => [
+            'name' => 0,
+            'qualification' => 1,
+            'experience' => 2,
+            'training' => 3,
+            'signature' => 4,
+        ],
+        'Laboratory Staff' => [
+            'section_name' => 0,
+            'section_leader' => 1,
+            'qualification' => 2,
+            'experience' => 3,
+            'training' => 4,
+            'authorized_area' => 5,
+        ],
+        'Test Scope' => [
+            'sample_type' => 0,
+            'test_type' => 1,
+            'range' => 2,
+            'detection_limit' => 3,
+            'uncertainty' => 4,
+            'standard_method' => 5,
+            'equipment_used' => 6,
+            'qc_measures' => 7,
+        ],
+        'Equipment' => [
+            'equipment_name' => 0,
+            'model' => 1,
+            'capacity' => 2,
+            'detection_limit' => 3,
+            'calibration_date' => 4,
+            'next_calibration' => 5,
+            'usage' => 6,
+        ],
+        'Reference Materials' => [
+            'name' => 0,
+            'supplier' => 1,
+            'expiry' => 2,
+            'traceability' => 3,
+            'purpose' => 4,
+        ],
+        'Proficiency Testing' => [
+            'sample_type' => 0,
+            'test' => 1,
+            'date' => 2,
+            'organizing_body' => 3,
+            'z_score' => 4,
+            'corrective_action' => 5,
+        ],
+        'About Your Quality System' => [
+            'calibration_program_exists' => 0,
+            'calibration_program_comment' => 1,
+            'record_maintained' => 2,
+            'record_maintained_comment' => 3,
+            'facilities_adequate' => 4,
+            'facilities_adequate_comment' => 5,
+            'internal_procedure_exists' => 6,
+            'internal_procedure_comment' => 7,
+            'traceability_pnac' => 8,
+            'traceability_pnac_comment' => 9,
+            'traceability_other' => 10,
+            'in_house_calibration' => 11,
+            'in_house_uncertainty_identified' => 12,
+            'in_house_uncertainty_incorporated' => 13,
+            'complies' => 14,
+        ],
+        'Area of non-compliance' => [
+            'area' => 0,
+            'rectification_date' => 1,
+        ],
+        'Other Approvals' => [
+            'body_name' => 0,
+            'scope' => 1,
+            'certificate_no' => 2,
+            'start_date' => 3,
+            'expiry_date' => 4,
+        ],
+        'Declaration' => [
+            'application_types' => 0,
+            'other_type' => 1,
+            'agreement_accepted' => 2,
+            'fee' => 3,
+            'signed_by' => 4,
+            'signed_date' => 5,
+        ],
+    ];
+
+    $getLabel = function ($sectionTitleOrIndex, $fieldIndexOrName, $fallback = '') use ($getSection, $fieldIndexMap) {
+        $sec = $getSection($sectionTitleOrIndex);
+        if (!$sec || !isset($sec['fields'])) {
+            return $fallback;
+        }
+        if (is_int($fieldIndexOrName)) {
+            return $sec['fields'][$fieldIndexOrName]['label'] ?? $fallback;
+        }
+
+        $secTitle = $sec['title'] ?? '';
+        if (isset($fieldIndexMap[$secTitle][$fieldIndexOrName])) {
+            $idx = $fieldIndexMap[$secTitle][$fieldIndexOrName];
+            if (isset($sec['fields'][$idx]['label'])) {
+                return $sec['fields'][$idx]['label'];
+            }
+        }
+
+        foreach ($sec['fields'] as $fld) {
+            if (strcasecmp($fld['name'] ?? '', $fieldIndexOrName) === 0) {
+                return $fld['label'] ?? $fallback;
+            }
+        }
+        return $fallback;
+    };
+
+    $getColumns = function ($sectionTitleOrIndex, $fallbackColumns) use ($getSection, $fieldIndexMap) {
+        $sec = $getSection($sectionTitleOrIndex);
+        if (!$sec || !isset($sec['fields'])) {
+            return $fallbackColumns;
+        }
+        $cols = [];
+        $secTitle = $sec['title'] ?? '';
+        foreach ($fallbackColumns as $field => $fallbackLabel) {
+            $label = $fallbackLabel;
+            if (isset($fieldIndexMap[$secTitle][$field])) {
+                $idx = $fieldIndexMap[$secTitle][$field];
+                if (isset($sec['fields'][$idx]['label'])) {
+                    $cols[$field] = $sec['fields'][$idx]['label'];
+                    continue;
+                }
+            }
+            foreach ($sec['fields'] as $fld) {
+                if (strcasecmp($fld['name'] ?? '', $field) === 0) {
+                    $label = $fld['label'] ?? $fallbackLabel;
+                    break;
+                }
+            }
+            $cols[$field] = $label;
+        }
+        return $cols;
+    };
+
     $renderDetails = function (array $items) {
         echo '<div class="details-grid">';
         foreach ($items as $label => $itemValue) {
@@ -322,7 +528,7 @@
                     data-open="{{ $openSection === 'step1' ? '1' : '0' }}">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step 1: About Yourselves</h5>
+                            <h5 class="mb-1">Step 1: {{ $getSection('About Yourselves') ? $getSection('About Yourselves')['title'] : 'About Yourselves' }}</h5>
                             <p class="text-muted mb-0">Please type or use BLOCK LETTERS.</p>
                         </div>
                         <span class="badge {{ $isSaved('step1') ? 'bg-success' : 'bg-warning text-dark' }}">
@@ -336,13 +542,13 @@
                             <div class="row g-3">
                                 {{-- Organisation Name and Address (master table fields) --}}
                                 <div class="col-md-6">
-                                    <label class="form-label">Organisation Name <span class="text-danger">*</span></label>
+                                    <label class="form-label">{{ $getLabel('About Yourselves', 'organisation_name', 'Organisation Name') }} <span class="text-danger">*</span></label>
                                     <input class="form-control" name="organisation_name"
                                         value="{{ old('organisation_name', $mlabApplication->organisation_name ?? '') }}"
                                         required>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Medical Laboratory Address <span
+                                    <label class="form-label">{{ $getLabel('About Yourselves', 'lab_address', 'Medical Laboratory Address') }} <span
                                             class="text-danger">*</span></label>
                                     <textarea class="form-control" name="lab_address" rows="2" required>{{ old('lab_address', $mlabApplication->lab_address ?? '') }}</textarea>
                                 </div>
@@ -352,14 +558,14 @@
                                     <h6 class="fw-bold">1.1 Name and position (Director level) of person authorising this
                                         application</h6>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Title <span
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'title', 'Title') }} <span
                                             class="text-danger">*</span></label><input class="form-control" name="title"
                                         value="{{ old('title', $step1->title ?? '') }}" required></div>
-                                <div class="col-md-4"><label class="form-label">Name <span
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'contact_name', 'Name') }} <span
                                             class="text-danger">*</span></label><input class="form-control"
                                         name="contact_name" value="{{ old('contact_name', $step1->contact_name ?? '') }}"
                                         required></div>
-                                <div class="col-md-4"><label class="form-label">Position <span
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'contact_designation', 'Position') }} <span
                                             class="text-danger">*</span></label><input class="form-control"
                                         name="contact_designation"
                                         value="{{ old('contact_designation', $step1->contact_designation ?? '') }}"
@@ -369,18 +575,17 @@
                                 <div class="col-12 mt-3">
                                     <h6 class="fw-bold">1.2 Name and address of the parent organisation (if any)</h6>
                                 </div>
-                                <div class="col-md-12"><label class="form-label">Parent Organisation</label><input
+                                <div class="col-md-12"><label class="form-label">{{ $getLabel('About Yourselves', 'parent_organisation', 'Parent Organisation') }}</label><input
                                         class="form-control" name="parent_organisation"
                                         value="{{ old('parent_organisation', $step1->parent_organisation ?? '') }}"></div>
-                                <div class="col-md-12"><label class="form-label">Relationship with Parent
-                                        organisation</label><input class="form-control" name="parent_relationship"
+                                <div class="col-md-12"><label class="form-label">{{ $getLabel('About Yourselves', 'parent_relationship', 'Relationship with Parent organisation') }}</label><input class="form-control" name="parent_relationship"
                                         value="{{ old('parent_relationship', $step1->parent_relationship ?? '') }}"></div>
-                                <div class="col-md-12"><label class="form-label">Address</label>
+                                <div class="col-md-12"><label class="form-label">{{ $getLabel('About Yourselves', 'parent_address', 'Address') }}</label>
                                     <textarea class="form-control" name="parent_address" rows="2">{{ old('parent_address', $step1->parent_address ?? '') }}</textarea>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Tel</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'parent_tel', 'Tel') }}</label><input class="form-control"
                                         name="parent_tel" value="{{ old('parent_tel', $step1->parent_tel ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">Fax</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'parent_fax', 'Fax') }}</label><input class="form-control"
                                         name="parent_fax" value="{{ old('parent_fax', $step1->parent_fax ?? '') }}"></div>
 
                                 {{-- 1.3 Invoice Address --}}
@@ -388,27 +593,27 @@
                                     <h6 class="fw-bold">1.3 Address for invoicing (if different from the laboratory’s
                                         address)</h6>
                                 </div>
-                                <div class="col-md-12"><label class="form-label">Organisation <span
+                                <div class="col-md-12"><label class="form-label">{{ $getLabel('About Yourselves', 'invoice_organisation', 'Organisation') }} <span
                                             class="text-danger">*</span></label><input class="form-control"
                                         name="invoice_organisation"
                                         value="{{ old('invoice_organisation', $step1->invoice_organisation ?? '') }}"
                                         required>
                                 </div>
-                                <div class="col-md-12"><label class="form-label">Address <span
+                                <div class="col-md-12"><label class="form-label">{{ $getLabel('About Yourselves', 'invoice_address', 'Address') }} <span
                                             class="text-danger">*</span></label>
                                     <textarea class="form-control" name="invoice_address" rows="2" required>{{ old('invoice_address', $step1->invoice_address ?? '') }}</textarea>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Postcode <span
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'invoice_postcode', 'Postcode') }} <span
                                             class="text-danger">*</span></label><input class="form-control"
                                         name="invoice_postcode"
                                         value="{{ old('invoice_postcode', $step1->invoice_postcode ?? '') }}" required>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Tel <span
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'invoice_tel', 'Tel') }} <span
                                             class="text-danger">*</span></label><input class="form-control"
                                         name="invoice_tel" value="{{ old('invoice_tel', $step1->invoice_tel ?? '') }}"
                                         required>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Fax <span
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'invoice_fax', 'Fax') }} <span
                                             class="text-danger">*</span></label><input class="form-control"
                                         name="invoice_fax" value="{{ old('invoice_fax', $step1->invoice_fax ?? '') }}"
                                         required>
@@ -416,7 +621,7 @@
 
                                 {{-- 1.4 Ownership --}}
                                 <div class="col-12 mt-3">
-                                    <h6 class="fw-bold">1.4 Information about ownership: please tick the appropriate box.
+                                    <h6 class="fw-bold">{{ $getLabel('About Yourselves', 'ownership_type', '1.4 Information about ownership: please tick the appropriate box.') }}
                                         <span class="text-danger">*</span>
                                     </h6>
                                 </div>
@@ -448,11 +653,11 @@
                                         @endforeach
                                     </div>
                                     <div class="mt-2">
-                                        <label class="form-label">Registration No. (if applicable) <span
+                                        <label class="form-label">{{ $getLabel('About Yourselves', 'registration_no', 'Registration No. (if applicable)') }} <span
                                                 class="text-danger">*</span></label>
                                         <input class="form-control" name="registration_no"
                                             value="{{ old('registration_no', $step1->registration_no ?? '') }}" required>
-                                        <label class="form-label">If Other, please describe <span
+                                        <label class="form-label">{{ $getLabel('About Yourselves', 'ownership_other_description', 'If Other, please describe') }} <span
                                                 class="text-danger">*</span></label>
                                         <textarea class="form-control" name="ownership_other_description" rows="2" required>{{ old('ownership_other_description', $step1->ownership_other_description ?? '') }}</textarea>
                                     </div>
@@ -460,7 +665,7 @@
 
                                 {{-- 1.5 Main activity of parent company --}}
                                 <div class="col-12 mt-3">
-                                    <h6 class="fw-bold">1.5 Is testing the main activity of the parent company? <span
+                                    <h6 class="fw-bold">{{ $getLabel('About Yourselves', 'testing_main_activity', '1.5 Is testing the main activity of the parent company?') }} <span
                                             class="text-danger">*</span></h6>
                                 </div>
                                 <div class="col-md-6">
@@ -478,8 +683,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">If No, describe the main activities of the parent
-                                        company <span class="text-danger">*</span></label>
+                                    <label class="form-label">{{ $getLabel('About Yourselves', 'main_activity_description', 'If No, describe the main activities of the parent company') }} <span class="text-danger">*</span></label>
                                     <textarea class="form-control" name="main_activity_description" rows="2" required>{{ old('main_activity_description', $step1->main_activity_description ?? '') }}</textarea>
                                 </div>
 
@@ -487,26 +691,26 @@
                                 <div class="col-12 mt-3">
                                     <h6 class="fw-bold">1.6 Name of Consultant / Consultancy Firm (if any)</h6>
                                 </div>
-                                <div class="col-md-6"><label class="form-label">Name</label><input class="form-control"
+                                <div class="col-md-6"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_name', 'Name') }}</label><input class="form-control"
                                         name="consultant_name"
                                         value="{{ old('consultant_name', $step1->consultant_name ?? '') }}"></div>
-                                <div class="col-md-6"><label class="form-label">Organisation</label><input
+                                <div class="col-md-6"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_organisation', 'Organisation') }}</label><input
                                         class="form-control" name="consultant_organisation"
                                         value="{{ old('consultant_organisation', $step1->consultant_organisation ?? '') }}">
                                 </div>
-                                <div class="col-md-12"><label class="form-label">Address</label>
+                                <div class="col-md-12"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_address', 'Address') }}</label>
                                     <textarea class="form-control" name="consultant_address" rows="2">{{ old('consultant_address', $step1->consultant_address ?? '') }}</textarea>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Postcode</label><input
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_postcode', 'Postcode') }}</label><input
                                         class="form-control" name="consultant_postcode"
                                         value="{{ old('consultant_postcode', $step1->consultant_postcode ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">Tel</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_tel', 'Tel') }}</label><input class="form-control"
                                         name="consultant_tel"
                                         value="{{ old('consultant_tel', $step1->consultant_tel ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">Fax</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_fax', 'Fax') }}</label><input class="form-control"
                                         name="consultant_fax"
                                         value="{{ old('consultant_fax', $step1->consultant_fax ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">E-Mail</label><input type="email"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_email', 'E-Mail') }}</label><input type="email"
                                         class="form-control" name="consultant_email"
                                         value="{{ old('consultant_email', $step1->consultant_email ?? '') }}"></div>
 
@@ -531,19 +735,18 @@
                                                 value="yes" id="{{ $field }}"
                                                 @if (old($field, $step1->{$field} ?? '') === 'yes') checked @endif>
                                             <label class="form-check-label"
-                                                for="{{ $field }}">{{ $label }}</label>
+                                                for="{{ $field }}">{{ $getLabel('About Yourselves', $field, $label) }}</label>
                                         </div>
                                     </div>
                                 @endforeach
                                 <div class="col-md-12">
-                                    <label class="form-label">If Sample Collection Centre is Yes, attach list of sample
-                                        collection centres (upload later) <span class="text-danger">*</span></label>
+                                    <label class="form-label">{{ $getLabel('About Yourselves', 'sample_collection_list', 'If Sample Collection Centre is Yes, attach list of sample collection centres (upload later)') }} <span class="text-danger">*</span></label>
                                     <input type="file" name="sample_collection_list" class="form-control" required>
                                 </div>
 
                                 {{-- Fields of Testing --}}
                                 <div class="col-12 mt-3">
-                                    <label class="form-label">Fields of Testing <span class="text-danger">*</span></label>
+                                    <label class="form-label">{{ $getLabel('About Yourselves', 'fields_of_testing', 'Fields of Testing') }} <span class="text-danger">*</span></label>
                                     <div class="row">
                                         @php $fields = ['Clinical Chemistry', 'Haematology', 'Histopathology', 'Immunology', 'Microbiology', 'Molecular Biology']; @endphp
                                         @foreach ($fields as $field)
@@ -582,47 +785,47 @@
                             $renderDetails(
                                 array_merge(
                                     [
-                                        'Organisation Name' => $mlabApplication->organisation_name ?? '-',
-                                        'Laboratory Address' => $mlabApplication->lab_address ?? '-',
+                                        $getLabel('About Yourselves', 'organisation_name', 'Organisation Name') => $mlabApplication->organisation_name ?? '-',
+                                        $getLabel('About Yourselves', 'lab_address', 'Laboratory Address') => $mlabApplication->lab_address ?? '-',
                                     ],
                                     [
-                                        'Title' => $step1->title ?? '-',
-                                        'Name' => $step1->contact_name ?? '-',
-                                        'Position' => $step1->contact_designation ?? '-',
-                                        'Parent Organisation' => $step1->parent_organisation ?? '-',
-                                        'Relationship' => $step1->parent_relationship ?? '-',
-                                        'Parent Address' => $step1->parent_address ?? '-',
-                                        'Parent Postcode' => $step1->parent_postcode ?? '-',
-                                        'Parent Tel' => $step1->parent_tel ?? '-',
-                                        'Parent Fax' => $step1->parent_fax ?? '-',
-                                        'Invoice Organisation' => $step1->invoice_organisation ?? '-',
-                                        'Invoice Address' => $step1->invoice_address ?? '-',
-                                        'Invoice Postcode' => $step1->invoice_postcode ?? '-',
-                                        'Invoice Tel' => $step1->invoice_tel ?? '-',
-                                        'Invoice Fax' => $step1->invoice_fax ?? '-',
-                                        'Ownership' => $step1->ownership_type ?? '-',
-                                        'Registration No.' => $step1->registration_no ?? '-',
-                                        'Other Ownership Description' => $step1->ownership_other_description ?? '-',
-                                        'Testing Main Activity?' => ucfirst($step1->testing_main_activity ?? '-'),
-                                        'Main Activity Description' => $step1->main_activity_description ?? '-',
-                                        'Consultant Name' => $step1->consultant_name ?? '-',
-                                        'Consultant Organisation' => $step1->consultant_organisation ?? '-',
-                                        'Consultant Address' => $step1->consultant_address ?? '-',
-                                        'Consultant Postcode' => $step1->consultant_postcode ?? '-',
-                                        'Consultant Tel' => $step1->consultant_tel ?? '-',
-                                        'Consultant Fax' => $step1->consultant_fax ?? '-',
-                                        'Consultant Email' => $step1->consultant_email ?? '-',
-                                        'Permanent Facility' =>
+                                        $getLabel('About Yourselves', 'title', 'Title') => $step1->title ?? '-',
+                                        $getLabel('About Yourselves', 'contact_name', 'Name') => $step1->contact_name ?? '-',
+                                        $getLabel('About Yourselves', 'contact_designation', 'Position') => $step1->contact_designation ?? '-',
+                                        $getLabel('About Yourselves', 'parent_organisation', 'Parent Organisation') => $step1->parent_organisation ?? '-',
+                                        $getLabel('About Yourselves', 'parent_relationship', 'Relationship') => $step1->parent_relationship ?? '-',
+                                        $getLabel('About Yourselves', 'parent_address', 'Parent Address') => $step1->parent_address ?? '-',
+                                        $getLabel('About Yourselves', 'parent_postcode', 'Parent Postcode') => $step1->parent_postcode ?? '-',
+                                        $getLabel('About Yourselves', 'parent_tel', 'Parent Tel') => $step1->parent_tel ?? '-',
+                                        $getLabel('About Yourselves', 'parent_fax', 'Parent Fax') => $step1->parent_fax ?? '-',
+                                        $getLabel('About Yourselves', 'invoice_organisation', 'Invoice Organisation') => $step1->invoice_organisation ?? '-',
+                                        $getLabel('About Yourselves', 'invoice_address', 'Invoice Address') => $step1->invoice_address ?? '-',
+                                        $getLabel('About Yourselves', 'invoice_postcode', 'Invoice Postcode') => $step1->invoice_postcode ?? '-',
+                                        $getLabel('About Yourselves', 'invoice_tel', 'Invoice Tel') => $step1->invoice_tel ?? '-',
+                                        $getLabel('About Yourselves', 'invoice_fax', 'Invoice Fax') => $step1->invoice_fax ?? '-',
+                                        $getLabel('About Yourselves', 'ownership_type', 'Ownership') => $step1->ownership_type ?? '-',
+                                        $getLabel('About Yourselves', 'registration_no', 'Registration No.') => $step1->registration_no ?? '-',
+                                        $getLabel('About Yourselves', 'ownership_other_description', 'Other Ownership Description') => $step1->ownership_other_description ?? '-',
+                                        $getLabel('About Yourselves', 'testing_main_activity', 'Testing Main Activity?') => ucfirst($step1->testing_main_activity ?? '-'),
+                                        $getLabel('About Yourselves', 'main_activity_description', 'Main Activity Description') => $step1->main_activity_description ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_name', 'Consultant Name') => $step1->consultant_name ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_organisation', 'Consultant Organisation') => $step1->consultant_organisation ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_address', 'Consultant Address') => $step1->consultant_address ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_postcode', 'Consultant Postcode') => $step1->consultant_postcode ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_tel', 'Consultant Tel') => $step1->consultant_tel ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_fax', 'Consultant Fax') => $step1->consultant_fax ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_email', 'Consultant Email') => $step1->consultant_email ?? '-',
+                                        $getLabel('About Yourselves', 'facility_permanent', 'Permanent Facility') =>
                                             ($step1->facility_permanent ?? '') === 'yes' ? 'Yes' : 'No',
-                                        'Sample Collection Centre' =>
+                                        $getLabel('About Yourselves', 'facility_sample_collection', 'Sample Collection Centre') =>
                                             ($step1->facility_sample_collection ?? '') === 'yes' ? 'Yes' : 'No',
-                                        'Temporary Facility' =>
+                                        $getLabel('About Yourselves', 'facility_temporary', 'Temporary Facility') =>
                                             ($step1->facility_temporary ?? '') === 'yes' ? 'Yes' : 'No',
-                                        'Mobile Laboratory' => ($step1->facility_mobile ?? '') === 'yes' ? 'Yes' : 'No',
-                                        'Fields of Testing' => is_array($step1->fields_of_testing ?? [])
+                                        $getLabel('About Yourselves', 'facility_mobile', 'Mobile Laboratory') => ($step1->facility_mobile ?? '') === 'yes' ? 'Yes' : 'No',
+                                        $getLabel('About Yourselves', 'fields_of_testing', 'Fields of Testing') => is_array($step1->fields_of_testing ?? [])
                                             ? implode(', ', $step1->fields_of_testing)
                                             : '-',
-                                        'Other Testing Field' => $step1->other_field ?? '-',
+                                        $getLabel('About Yourselves', 'other_field', 'Other Testing Field') => $step1->other_field ?? '-',
                                     ],
                                 ),
                             );
@@ -630,10 +833,6 @@
                         <div class="d-flex justify-content-end mt-3"><a href="{{ $editUrl('step1') }}"
                                 class="btn btn-outline-success btn-sm">Edit</a></div>
                     @endif
-                </div>
-                {{-- ========================================================== --}}
-                {{-- STEP 2: Staff Information                                   --}}
-                {{-- ========================================================== --}}
                 @php
                     $technicalManagement = $mlabData['technical_management'] ?? collect();
                     $qualityManager = $mlabData['quality_manager'] ?? null;

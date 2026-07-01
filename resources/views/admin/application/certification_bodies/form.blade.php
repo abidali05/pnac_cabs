@@ -32,12 +32,14 @@
         'F-02/29 Form',
     ];
     $documentsByType = ($cbData['documents'] ?? collect())->keyBy('document_type');
-    
+
     // Load existing form schema dynamically
     $schema = $form?->form_schema;
 
     $getSection = function ($titleOrIndex) use ($schema) {
-        if (!$schema || !isset($schema['sections'])) return null;
+        if (!$schema || !isset($schema['sections'])) {
+            return null;
+        }
         if (is_int($titleOrIndex)) {
             return $schema['sections'][$titleOrIndex] ?? null;
         }
@@ -49,12 +51,136 @@
         return null;
     };
 
-    $getLabel = function ($sectionTitleOrIndex, $fieldIndexOrName, $fallback = '') use ($getSection) {
+    // Pre-mapped lookup indexes to decouple DB field name changes from rendering layout
+    $fieldIndexMap = [
+        'Basic Application Information' => [
+            'scheme_name' => 0,
+            'application_type' => 1,
+            'application_no' => 2,
+            'application_number' => 2,
+            'status' => 3,
+            'created_by' => 4,
+            'created_date' => 5,
+        ],
+        'About Yourselves' => [
+            'name' => 0,
+            'position' => 1,
+            'parent_organization' => 2,
+            'relationship' => 3,
+            'postcode' => 4,
+            'telephone' => 5,
+            'fax' => 6,
+            'parent_address' => 7,
+            'ownership' => 8,
+            'main_activity' => 9,
+            'invoice_organization' => 10,
+            'invoice_address' => 11,
+            'invoice_postcode' => 12,
+            'invoice_telephone' => 13,
+            'invoice_fax' => 14,
+            'consultant_name' => 15,
+            'consultant_organization' => 16,
+            'consultant_address' => 17,
+            'consultant_postcode' => 18,
+            'consultant_telephone' => 19,
+            'consultant_fax' => 20,
+            'consultant_email' => 21,
+        ],
+        'Staff Information' => [
+            'chief_executive_name' => 0,
+            'chief_executive_qualifications' => 1,
+            'chief_executive_relevant_experience' => 2,
+            'quality_management_representative_name' => 3,
+            'quality_management_representative_qualifications' => 4,
+            'quality_management_representative_relevant_experience' => 5,
+        ],
+        'Management Members' => [
+            'name' => 0,
+            'qualifications' => 1,
+            'relevant_experience' => 2,
+        ],
+        'Permanent Auditors' => [
+            'name' => 0,
+            'qualifications' => 1,
+            'auditing_field' => 2,
+            'audit_experience' => 3,
+        ],
+        'Freelance/Subcontracted Auditors' => [
+            'name' => 0,
+            'qualifications' => 1,
+            'auditing_field' => 2,
+            'audit_experience' => 3,
+        ],
+        'Scope of Application - QMS ISO 9001' => [
+            'technical_cluster' => 0,
+            'iaf_code' => 1,
+            'description' => 2,
+        ],
+        'Scope of Application - EMS ISO 14001' => [
+            'technical_cluster' => 0,
+            'iaf_code' => 1,
+            'description' => 2,
+        ],
+        'Scope of Application - OH&S ISO 45001' => [
+            'technical_cluster' => 0,
+            'iaf_code' => 1,
+            'description' => 2,
+        ],
+        'Scope of Application - FSMS ISO 22000' => [
+            'cluster' => 0,
+            'category' => 1,
+            'sub_category' => 2,
+            'activities' => 3,
+        ],
+        'Scope of Application - MD-QMS ISO 13485' => [
+            'main_technical_area' => 0,
+            'technical_area' => 1,
+            'product_category' => 2,
+        ],
+        'Scope of Application - ISMS ISO 27001' => [
+            'scope' => 0,
+            'standard' => 1,
+        ],
+        'About Your Quality System' => [
+            'does_the_certification_body_comply_with_iso_iec_17021_1_and_pnac_requirements' => 0,
+        ],
+        'Non Compliance' => [
+            'area_of_non_compliance' => 0,
+            'rectification_date' => 1,
+        ],
+        'Other Approvals' => [
+            'approval_body_name' => 0,
+            'address' => 1,
+            'scope' => 2,
+            'certificate_number' => 3,
+            'start_date' => 4,
+            'expiry_date' => 5,
+        ],
+        'Declaration' => [
+            'declaration_accepted' => 0,
+            'applicant_fee_amount' => 1,
+            'digital_signature_name' => 2,
+            'signed_date' => 3,
+        ],
+    ];
+
+    $getLabel = function ($sectionTitleOrIndex, $fieldIndexOrName, $fallback = '') use ($getSection, $fieldIndexMap) {
         $sec = $getSection($sectionTitleOrIndex);
-        if (!$sec || !isset($sec['fields'])) return $fallback;
+        if (!$sec || !isset($sec['fields'])) {
+            return $fallback;
+        }
         if (is_int($fieldIndexOrName)) {
             return $sec['fields'][$fieldIndexOrName]['label'] ?? $fallback;
         }
+
+        $secTitle = $sec['title'] ?? '';
+        if (isset($fieldIndexMap[$secTitle][$fieldIndexOrName])) {
+            $idx = $fieldIndexMap[$secTitle][$fieldIndexOrName];
+            if (isset($sec['fields'][$idx]['label'])) {
+                return $sec['fields'][$idx]['label'];
+            }
+        }
+
         foreach ($sec['fields'] as $fld) {
             if (strcasecmp($fld['name'] ?? '', $fieldIndexOrName) === 0) {
                 return $fld['label'] ?? $fallback;
@@ -63,12 +189,22 @@
         return $fallback;
     };
 
-    $getColumns = function ($sectionTitleOrIndex, $fallbackColumns) use ($getSection) {
+    $getColumns = function ($sectionTitleOrIndex, $fallbackColumns) use ($getSection, $fieldIndexMap) {
         $sec = $getSection($sectionTitleOrIndex);
-        if (!$sec || !isset($sec['fields'])) return $fallbackColumns;
+        if (!$sec || !isset($sec['fields'])) {
+            return $fallbackColumns;
+        }
         $cols = [];
+        $secTitle = $sec['title'] ?? '';
         foreach ($fallbackColumns as $field => $fallbackLabel) {
             $label = $fallbackLabel;
+            if (isset($fieldIndexMap[$secTitle][$field])) {
+                $idx = $fieldIndexMap[$secTitle][$field];
+                if (isset($sec['fields'][$idx]['label'])) {
+                    $cols[$field] = $sec['fields'][$idx]['label'];
+                    continue;
+                }
+            }
             foreach ($sec['fields'] as $fld) {
                 if (strcasecmp($fld['name'] ?? '', $field) === 0) {
                     $label = $fld['label'] ?? $fallbackLabel;
@@ -141,7 +277,7 @@
         $title = $sec ? $sec['title'] : $group['title'];
         $displayTitle = str_replace('Scope of Application - ', '', $title);
         $cols = $getColumns($secTitle, $group['columns']);
-        
+
         $dynamicScopeGroups[$key] = [
             'title' => $displayTitle,
             'target' => $group['target'],
@@ -204,7 +340,9 @@
             data-open="{{ $openSection === 'basic_info' ? '1' : '0' }}">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div>
-                    <h5 class="mb-1">Step 1: {{ $getSection('Basic Application Information') ? $getSection('Basic Application Information')['title'] : 'Basic Application Information' }}</h5>
+                    <h5 class="mb-1">Step 1:
+                        {{ $getSection('Basic Application Information') ? $getSection('Basic Application Information')['title'] : 'Basic Application Information' }}
+                    </h5>
                     <p class="text-muted mb-0">Application identity and status.</p>
                 </div>
                 <span
@@ -214,27 +352,33 @@
                 <form method="POST" action="{{ $sectionUrl('basic_info') }}" class="js-card-form cb-js-card-form">
                     @csrf
                     <div class="row g-3">
-                        <div class="col-md-4"><label class="form-label">{{ $getLabel('Basic Application Information', 'name', 'Scheme Name') }} <span
-                                    class="text-danger">*</span></label><input class="form-control" name="scheme_name"
+                        <div class="col-md-4"><label
+                                class="form-label">{{ $getLabel('Basic Application Information', 'scheme_name', 'Scheme Name') }}
+                                <span class="text-danger">*</span></label><input class="form-control" name="scheme_name"
                                 value="{{ old('scheme_name', $cbApplication->scheme_name) }}" required></div>
-                        <div class="col-md-4"><label class="form-label">{{ $getLabel('Basic Application Information', 'application', 'Application Type') }} <span
-                                    class="text-danger">*</span></label><input class="form-control"
+                        <div class="col-md-4"><label
+                                class="form-label">{{ $getLabel('Basic Application Information', 'application_type', 'Application Type') }}
+                                <span class="text-danger">*</span></label><input class="form-control"
                                 name="application_type"
                                 value="{{ old('application_type', $cbApplication->application_type) }}" required></div>
-                        <div class="col-md-4"><label class="form-label">{{ $getLabel('Basic Application Information', 'application_number', 'Application Number') }} <span
-                                    class="text-danger">*</span></label><input class="form-control"
+                        <div class="col-md-4"><label
+                                class="form-label">{{ $getLabel('Basic Application Information', 'application_no', 'Application Number') }}
+                                <span class="text-danger">*</span></label><input class="form-control"
                                 name="application_no"
                                 value="{{ old('application_no', $cbApplication->application_no) }}" readonly></div>
 
-                        <div class="col-md-4"><label class="form-label">{{ $getLabel('Basic Application Information', 'status', 'Status') }} <span
-                                    class="text-danger">*</span></label><input class="form-control"
+                        <div class="col-md-4"><label
+                                class="form-label">{{ $getLabel('Basic Application Information', 'status', 'Status') }}
+                                <span class="text-danger">*</span></label><input class="form-control"
                                 value="{{ $cbApplication->status }}" readonly></div>
-                        <div class="col-md-4"><label class="form-label">{{ $getLabel('Basic Application Information', 'created_by', 'Created By') }} <span
-                                    class="text-danger">*</span></label><input class="form-control"
+                        <div class="col-md-4"><label
+                                class="form-label">{{ $getLabel('Basic Application Information', 'created_by', 'Created By') }}
+                                <span class="text-danger">*</span></label><input class="form-control"
                                 value="{{ optional($cbApplication->creator)->name ?? auth()->user()->name }}" readonly>
                         </div>
-                        <div class="col-md-4"><label class="form-label">{{ $getLabel('Basic Application Information', 'created_date', 'Created Date') }} <span
-                                    class="text-danger">*</span></label><input class="form-control"
+                        <div class="col-md-4"><label
+                                class="form-label">{{ $getLabel('Basic Application Information', 'created_date', 'Created Date') }}
+                                <span class="text-danger">*</span></label><input class="form-control"
                                 value="{{ optional($cbApplication->created_at)->format('Y-m-d') }}" readonly></div>
                     </div>
                     <div class="d-flex justify-content-end mt-3">
@@ -244,12 +388,27 @@
             @else
                 @php
                     $renderDetails([
-                        $getLabel('Basic Application Information', 'name', 'Scheme Name') => $cbApplication->scheme_name,
-                        $getLabel('Basic Application Information', 'application', 'Application Type') => $cbApplication->application_type,
-                        $getLabel('Basic Application Information', 'application_number', 'Application Number') => $cbApplication->application_no,
+                        $getLabel(
+                            'Basic Application Information',
+                            'scheme_name',
+                            'Scheme Name',
+                        ) => $cbApplication->scheme_name,
+                        $getLabel(
+                            'Basic Application Information',
+                            'application_type',
+                            'Application Type',
+                        ) => $cbApplication->application_type,
+                        $getLabel(
+                            'Basic Application Information',
+                            'application_no',
+                            'Application Number',
+                        ) => $cbApplication->application_no,
                         $getLabel('Basic Application Information', 'status', 'Status') => $cbApplication->status,
-                        $getLabel('Basic Application Information', 'created_by', 'Created By') => optional($cbApplication->creator)->name ?? auth()->user()->name,
-                        $getLabel('Basic Application Information', 'created_date', 'Created Date') => optional($cbApplication->created_at)->format('Y-m-d'),
+                        $getLabel('Basic Application Information', 'created_by', 'Created By') =>
+                            optional($cbApplication->creator)->name ?? auth()->user()->name,
+                        $getLabel('Basic Application Information', 'created_date', 'Created Date') => optional(
+                            $cbApplication->created_at,
+                        )->format('Y-m-d'),
                     ]);
                 @endphp
                 <div class="d-flex justify-content-end mt-3"><a href="{{ $editUrl('basic_info') }}"
@@ -268,7 +427,9 @@
             data-open="{{ $openSection === 'about_yourselves' ? '1' : '0' }}">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div>
-                    <h5 class="mb-1">Step 2: {{ $getSection('About Yourselves') ? $getSection('About Yourselves')['title'] : 'About Yourselves' }}</h5>
+                    <h5 class="mb-1">Step 2:
+                        {{ $getSection('About Yourselves') ? $getSection('About Yourselves')['title'] : 'About Yourselves' }}
+                    </h5>
                     <p class="text-muted mb-0">Authorized person, ownership, invoicing, and consultant details.</p>
                 </div>
                 <span
@@ -280,24 +441,29 @@
                     @csrf
                     <div class="row g-3">
                         {{-- <div class="col-md-3"><label class="form-label">Title</label><input class="form-control" name="authorized_person[title]" value="{{ $authorized->title ?? '' }}"></div> --}}
-                        <div class="col-md-5"><label class="form-label">{{ $getLabel('About Yourselves', 'name', 'Name') }} <span
+                        <div class="col-md-5"><label
+                                class="form-label">{{ $getLabel('About Yourselves', 'name', 'Name') }} <span
                                     class="text-danger">*</span></label><input class="form-control"
                                 name="authorized_person[name]" value="{{ $authorized->name ?? '' }}" required></div>
-                        <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'position', 'Position') }} <span
+                        <div class="col-md-4"><label
+                                class="form-label">{{ $getLabel('About Yourselves', 'position', 'Position') }} <span
                                     class="text-danger">*</span></label><input class="form-control"
                                 name="authorized_person[position]" value="{{ $authorized->position ?? '' }}" required>
                         </div>
                         @foreach (['parent_organization' => 'Parent Organization', 'relationship' => 'Relationship', 'postcode' => 'Postcode', 'telephone' => 'Telephone', 'fax' => 'Fax'] as $field => $fallbackLabel)
-                            <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', $field, $fallbackLabel) }} <span
-                                         class="text-danger">*</span></label><input class="form-control"
-                                     name="parent_organization[{{ $field }}]"
-                                     value="{{ $parent->{$field} ?? '' }}" required></div>
+                            <div class="col-md-4"><label
+                                    class="form-label">{{ $getLabel('About Yourselves', $field, $fallbackLabel) }}
+                                    <span class="text-danger">*</span></label><input class="form-control"
+                                    name="parent_organization[{{ $field }}]"
+                                    value="{{ $parent->{$field} ?? '' }}" required></div>
                         @endforeach
-                        <div class="col-md-8"><label class="form-label">{{ $getLabel('About Yourselves', 'parent_address', 'Parent Address') }} <span
-                                    class="text-danger">*</span></label><input class="form-control"
+                        <div class="col-md-8"><label
+                                class="form-label">{{ $getLabel('About Yourselves', 'parent_address', 'Parent Address') }}
+                                <span class="text-danger">*</span></label><input class="form-control"
                                 name="parent_organization[address]" value="{{ $parent->address ?? '' }}" required>
                         </div>
-                        <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'ownership', 'Ownership') }} <span
+                        <div class="col-md-4"><label
+                                class="form-label">{{ $getLabel('About Yourselves', 'ownership', 'Ownership') }} <span
                                     class="text-danger">*</span></label><select class="form-control cb-ownership-select"
                                 name="parent_organization[ownership_type]" required>
                                 <option value="">Select</option>
@@ -306,36 +472,39 @@
                                         {{ $type }}</option>
                                 @endforeach
                             </select></div>
-                        <div class="col-md-8 cb-ownership-other"><label class="form-label">Other
-                                Description <span class="text-danger">*</span></label><input class="form-control"
+                        <div class="col-md-8 cb-ownership-other"><label class="form-label">{{ $getLabel('About Yourselves', 'ownership_other_description', 'Other Description') }} <span class="text-danger">*</span></label><input class="form-control"
                                 name="parent_organization[ownership_other_description]"
                                 value="{{ $parent->ownership_other_description ?? '' }}" required></div>
-                        <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'main_activity', 'Main Activity?') }} <span
-                                    class="text-danger">*</span></label><select
+                        <div class="col-md-4"><label
+                                class="form-label">{{ $getLabel('About Yourselves', 'main_activity', 'Main Activity?') }}
+                                <span class="text-danger">*</span></label><select
                                 class="form-control cb-main-activity-select" name="parent_organization[main_activity]"
                                 required>
                                 <option value="">Select</option>
                                 <option value="yes" @selected(($parent->main_activity ?? '') === 'yes')>Yes</option>
                                 <option value="no" @selected(($parent->main_activity ?? '') === 'no')>No</option>
                             </select></div>
-                        <div class="col-md-8 cb-main-activity-description"><label class="form-label">If No,
-                                describe <span class="text-danger">*</span></label>
+                        <div class="col-md-8 cb-main-activity-description"><label class="form-label">{{ $getLabel('About Yourselves', 'main_activity_description', 'If No, describe') }} <span class="text-danger">*</span></label>
                             <textarea class="form-control" name="parent_organization[main_activity_description]" required>{{ $parent->main_activity_description ?? '' }}</textarea>
                         </div>
                         @foreach (['organization' => 'Invoice Organization', 'address' => 'Invoice Address', 'postcode' => 'Invoice Postcode', 'telephone' => 'Invoice Telephone', 'fax' => 'Invoice Fax'] as $field => $fallbackLabel)
-                            <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'invoice_' . $field, $fallbackLabel) }} <span
-                                         class="text-danger">*</span></label><input class="form-control"
-                                     name="invoice_address[{{ $field }}]"
-                                     value="{{ $invoice->{$field} ?? '' }}" required></div>
+                            <div class="col-md-4"><label
+                                    class="form-label">{{ $getLabel('About Yourselves', 'invoice_' . $field, $fallbackLabel) }}
+                                    <span class="text-danger">*</span></label><input class="form-control"
+                                    name="invoice_address[{{ $field }}]"
+                                    value="{{ $invoice->{$field} ?? '' }}" required></div>
                         @endforeach
                         @foreach (['consultant_name' => 'Consultant Name', 'organization' => 'Consultant Organization', 'address' => 'Consultant Address', 'postcode' => 'Consultant Postcode', 'telephone' => 'Consultant Telephone', 'fax' => 'Consultant Fax', 'email' => 'Consultant Email'] as $field => $fallbackLabel)
                             @php
-                                $schemaFieldName = str_starts_with($field, 'consultant_') ? $field : 'consultant_' . $field;
+                                $schemaFieldName = str_starts_with($field, 'consultant_')
+                                    ? $field
+                                    : 'consultant_' . $field;
                             @endphp
-                            <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', $schemaFieldName, $fallbackLabel) }} <span
-                                         class="text-danger">*</span></label><input class="form-control"
-                                     name="consultant[{{ $field }}]" value="{{ $consultant->{$field} ?? '' }}"
-                                     required @if ($field === 'email') type="email" @endif></div>
+                            <div class="col-md-4"><label
+                                    class="form-label">{{ $getLabel('About Yourselves', $schemaFieldName, $fallbackLabel) }}
+                                    <span class="text-danger">*</span></label><input class="form-control"
+                                    name="consultant[{{ $field }}]" value="{{ $consultant->{$field} ?? '' }}"
+                                    required @if ($field === 'email') type="email" @endif></div>
                         @endforeach
                     </div>
                     <div class="d-flex justify-content-end mt-3"><button class="btn btn-success btn-sm">Save
@@ -346,15 +515,19 @@
                     $renderDetails([
                         $getLabel('About Yourselves', 'name', 'Authorized Person') => $authorized->name ?? '',
                         $getLabel('About Yourselves', 'position', 'Position') => $authorized->position ?? '',
-                        $getLabel('About Yourselves', 'parent_organization', 'Parent Organization') => $parent->parent_organization ?? '',
+                        $getLabel('About Yourselves', 'parent_organization', 'Parent Organization') =>
+                            $parent->parent_organization ?? '',
                         $getLabel('About Yourselves', 'relationship', 'Relationship') => $parent->relationship ?? '',
                         $getLabel('About Yourselves', 'parent_address', 'Parent Address') => $parent->address ?? '',
                         $getLabel('About Yourselves', 'ownership', 'Ownership') => $parent->ownership_type ?? '',
                         $getLabel('About Yourselves', 'main_activity', 'Main Activity') => $parent->main_activity ?? '',
-                        $getLabel('About Yourselves', 'invoice_organization', 'Invoice Organization') => $invoice->organization ?? '',
+                        $getLabel('About Yourselves', 'invoice_organization', 'Invoice Organization') =>
+                            $invoice->organization ?? '',
                         $getLabel('About Yourselves', 'invoice_address', 'Invoice Address') => $invoice->address ?? '',
-                        $getLabel('About Yourselves', 'consultant_name', 'Consultant Name') => $consultant->consultant_name ?? '',
-                        $getLabel('About Yourselves', 'consultant_email', 'Consultant Email') => $consultant->email ?? '',
+                        $getLabel('About Yourselves', 'consultant_name', 'Consultant Name') =>
+                            $consultant->consultant_name ?? '',
+                        $getLabel('About Yourselves', 'consultant_email', 'Consultant Email') =>
+                            $consultant->email ?? '',
                     ]);
                 @endphp
                 <div class="d-flex justify-content-end mt-3"><a href="{{ $editUrl('about_yourselves') }}"
@@ -381,27 +554,47 @@
             $chiefColumns = [
                 'name' => $getLabel('Staff Information', 'chief_executive_name', 'Name'),
                 'qualifications' => $getLabel('Staff Information', 'chief_executive_qualifications', 'Qualifications'),
-                'relevant_experience' => $getLabel('Staff Information', 'chief_executive_relevant_experience', 'Relevant Experience'),
+                'relevant_experience' => $getLabel(
+                    'Staff Information',
+                    'chief_executive_relevant_experience',
+                    'Relevant Experience',
+                ),
             ];
             $qualityColumns = [
                 'name' => $getLabel('Staff Information', 'quality_management_representative_name', 'Name'),
-                'qualifications' => $getLabel('Staff Information', 'quality_management_representative_qualifications', 'Qualifications'),
-                'relevant_experience' => $getLabel('Staff Information', 'quality_management_representative_relevant_experience', 'Relevant Experience'),
+                'qualifications' => $getLabel(
+                    'Staff Information',
+                    'quality_management_representative_qualifications',
+                    'Qualifications',
+                ),
+                'relevant_experience' => $getLabel(
+                    'Staff Information',
+                    'quality_management_representative_relevant_experience',
+                    'Relevant Experience',
+                ),
             ];
-            $managementTitle = $getSection('Management Members') ? $getSection('Management Members')['title'] : 'Management Members';
+            $managementTitle = $getSection('Management Members')
+                ? $getSection('Management Members')['title']
+                : 'Management Members';
             $managementCols = $getColumns('Management Members', $staffColumns);
 
-            $permanentTitle = $getSection('Permanent Auditors') ? $getSection('Permanent Auditors')['title'] : 'Permanent Auditors';
+            $permanentTitle = $getSection('Permanent Auditors')
+                ? $getSection('Permanent Auditors')['title']
+                : 'Permanent Auditors';
             $permanentCols = $getColumns('Permanent Auditors', $auditorColumns);
 
-            $freelanceTitle = $getSection('Freelance/Subcontracted Auditors') ? $getSection('Freelance/Subcontracted Auditors')['title'] : 'Freelance/Subcontracted Auditors';
+            $freelanceTitle = $getSection('Freelance/Subcontracted Auditors')
+                ? $getSection('Freelance/Subcontracted Auditors')['title']
+                : 'Freelance/Subcontracted Auditors';
             $freelanceCols = $getColumns('Freelance/Subcontracted Auditors', $auditorColumns);
         @endphp
         <div class="border rounded p-3 p-md-4 mb-3 bg-white pnac-step-card" data-section="staff_info"
             data-open="{{ $openSection === 'staff_info' ? '1' : '0' }}">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div>
-                    <h5 class="mb-1">Step 3: {{ $getSection('Staff Information') ? $getSection('Staff Information')['title'] : 'Staff Information' }}</h5>
+                    <h5 class="mb-1">Step 3:
+                        {{ $getSection('Staff Information') ? $getSection('Staff Information')['title'] : 'Staff Information' }}
+                    </h5>
                     <p class="text-muted mb-0">Executives, management, and auditors.</p>
                 </div>
                 <span
@@ -556,7 +749,9 @@
                     ]);
         @endphp
         @php
-            $nonComplianceTitle = $getSection('Non Compliance') ? $getSection('Non Compliance')['title'] : 'Non Compliance';
+            $nonComplianceTitle = $getSection('Non Compliance')
+                ? $getSection('Non Compliance')['title']
+                : 'Non Compliance';
             $nonComplianceCols = $getColumns('Non Compliance', [
                 'area_of_non_compliance' => 'Area of Non Compliance',
                 'rectification_date' => 'Rectification Date',
@@ -566,7 +761,9 @@
             data-open="{{ $openSection === 'quality_system' ? '1' : '0' }}">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div>
-                    <h5 class="mb-1">Step 5: {{ $getSection('About Your Quality System') ? $getSection('About Your Quality System')['title'] : 'About Your Quality System' }}</h5>
+                    <h5 class="mb-1">Step 5:
+                        {{ $getSection('About Your Quality System') ? $getSection('About Your Quality System')['title'] : 'About Your Quality System' }}
+                    </h5>
                     <p class="text-muted mb-0">ISO/IEC 17021-1 and PNAC requirements.</p>
                 </div>
                 <span
@@ -576,7 +773,9 @@
                 <form method="POST" action="{{ $sectionUrl('quality_system') }}"
                     class="js-card-form cb-js-card-form">
                     @csrf
-                    <label class="fw-semibold">{{ $getLabel('About Your Quality System', 'does_the_certification_body_comply_with_iso_iec_17021_1_and_pnac_requirements', 'Does the Certification Body comply with ISO/IEC 17021-1 and PNAC requirements?') }} <span class="text-danger">*</span></label>
+                    <label
+                        class="fw-semibold">{{ $getLabel('About Your Quality System', 'does_the_certification_body_comply_with_iso_iec_17021_1_and_pnac_requirements', 'Does the Certification Body comply with ISO/IEC 17021-1 and PNAC requirements?') }}
+                        <span class="text-danger">*</span></label>
                     <div class="mb-3">
                         <label class="form-check form-check-inline"><input class="form-check-input cb-quality-toggle"
                                 type="radio" name="complies" value="yes" required @checked($qualityComplies === 'yes')>
@@ -614,7 +813,9 @@
 
         {{-- Step 6 --}}
         @php
-            $otherApprovalsTitle = $getSection('Other Approvals') ? $getSection('Other Approvals')['title'] : 'Other Approvals';
+            $otherApprovalsTitle = $getSection('Other Approvals')
+                ? $getSection('Other Approvals')['title']
+                : 'Other Approvals';
             $otherApprovalsCols = $getColumns('Other Approvals', [
                 'approval_body_name' => 'Approval Body Name',
                 'address' => 'Address',
@@ -628,7 +829,9 @@
             data-open="{{ $openSection === 'other_approvals' ? '1' : '0' }}">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div>
-                    <h5 class="mb-1">Step 6: {{ $getSection('Other Approvals') ? $getSection('Other Approvals')['title'] : 'Other Approvals' }}</h5>
+                    <h5 class="mb-1">Step 6:
+                        {{ $getSection('Other Approvals') ? $getSection('Other Approvals')['title'] : 'Other Approvals' }}
+                    </h5>
                     <p class="text-muted mb-0">Existing approvals and certificates.</p>
                 </div>
                 <span
@@ -642,7 +845,9 @@
                         'title' => $otherApprovalsTitle,
                         'target' => 'cbApprovalRows',
                         'name' => 'other_approvals',
-                        'rows' => $firstRow($cbData['other_approvals'] ?? collect(), array_fill_keys(array_keys($otherApprovalsCols), '')),
+                        'rows' => $firstRow(
+                            $cbData['other_approvals'] ?? collect(),
+                            array_fill_keys(array_keys($otherApprovalsCols), '')),
                         'columns' => $otherApprovalsCols,
                         'isLocked' => $isLocked,
                         'allowMultiple' => true,
@@ -663,7 +868,8 @@
             data-open="{{ $openSection === 'declaration' ? '1' : '0' }}">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div>
-                    <h5 class="mb-1">Step 6: {{ $getSection('Declaration') ? $getSection('Declaration')['title'] : 'Declaration' }}</h5>
+                    <h5 class="mb-1">Step 6:
+                        {{ $getSection('Declaration') ? $getSection('Declaration')['title'] : 'Declaration' }}</h5>
                     <p class="text-muted mb-0">Applicant fee, digital signature, and final submission.</p>
                 </div>
                 <span
@@ -675,16 +881,21 @@
                     <div class="row g-3">
                         <div class="col-md-12"><label class="form-check"><input class="form-check-input"
                                     type="checkbox" name="declaration_accepted" value="1"
-                                    @checked($declaration->declaration_accepted ?? false) required> <span class="form-check-label">{{ $getLabel('Declaration', 'i_declare_that_the_information_given_in_this_form_is_correct_to_the_best_of_my_knowledge_and_belief', 'I declare that the information given in this form is correct to the best of my knowledge and belief.') }} <span class="text-danger">*</span></span></label></div>
-                        <div class="col-md-4"><label class="form-label">{{ $getLabel('Declaration', 'applicant_fee_amount', 'Applicant Fee Amount') }} <span
-                                    class="text-danger">*</span></label><input class="form-control"
+                                    @checked($declaration->declaration_accepted ?? false) required> <span
+                                    class="form-check-label">{{ $getLabel('Declaration', 'i_declare_that_the_information_given_in_this_form_is_correct_to_the_best_of_my_knowledge_and_belief', 'I declare that the information given in this form is correct to the best of my knowledge and belief.') }}
+                                    <span class="text-danger">*</span></span></label></div>
+                        <div class="col-md-4"><label
+                                class="form-label">{{ $getLabel('Declaration', 'applicant_fee_amount', 'Applicant Fee Amount') }}
+                                <span class="text-danger">*</span></label><input class="form-control"
                                 name="applicant_fee_amount" value="{{ $declaration->applicant_fee_amount ?? '' }}"
                                 required></div>
-                        <div class="col-md-4"><label class="form-label">{{ $getLabel('Declaration', 'digital_signature_name', 'Digital Signature Name') }} <span
-                                    class="text-danger">*</span></label><input class="form-control"
+                        <div class="col-md-4"><label
+                                class="form-label">{{ $getLabel('Declaration', 'digital_signature_name', 'Digital Signature Name') }}
+                                <span class="text-danger">*</span></label><input class="form-control"
                                 name="digital_signature_name"
                                 value="{{ $declaration->digital_signature_name ?? '' }}" required></div>
-                        <div class="col-md-4"><label class="form-label">{{ $getLabel('Declaration', 'signed_date', 'Signed Date') }} <span
+                        <div class="col-md-4"><label
+                                class="form-label">{{ $getLabel('Declaration', 'signed_date', 'Signed Date') }} <span
                                     class="text-danger">*</span></label><input type="date" class="form-control"
                                 name="signed_date"
                                 value="{{ optional($declaration)->signed_date ?? now()->format('Y-m-d') }}" required>
@@ -700,8 +911,10 @@
                 @php
                     $renderDetails([
                         'Declaration Accepted' => $declaration->declaration_accepted ?? false ? 'Yes' : 'No',
-                        $getLabel('Declaration', 'applicant_fee_amount', 'Applicant Fee Amount') => $declaration->applicant_fee_amount ?? '',
-                        $getLabel('Declaration', 'digital_signature_name', 'Digital Signature Name') => $declaration->digital_signature_name ?? '',
+                        $getLabel('Declaration', 'applicant_fee_amount', 'Applicant Fee Amount') =>
+                            $declaration->applicant_fee_amount ?? '',
+                        $getLabel('Declaration', 'digital_signature_name', 'Digital Signature Name') =>
+                            $declaration->digital_signature_name ?? '',
                         $getLabel('Declaration', 'signed_date', 'Signed Date') => optional($declaration)->signed_date,
                     ]);
                 @endphp
