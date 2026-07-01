@@ -13,13 +13,13 @@ return new class extends Migration
     {
         Schema::create('document_details', function (Blueprint $table) {
             $table->id();
-             $table->string('name');
+            $table->string('name');
             $table->string('number');
             $table->string('upload_doc');
             $table->string('category');
 
-            $table->unsignedBigInteger('document_id');
-            $table->foreign('document_id')->references('id')->on('documents')->onDelete('cascade');
+            // $table->unsignedBigInteger('document_id');
+            // $table->foreign('document_id')->references('id')->on('documents')->onDelete('cascade');
 
             $table->unsignedBigInteger('user_id')->nullable();
             $table->unsignedBigInteger('certification_general_id')->nullable();

@@ -21,6 +21,64 @@
         $isOwnershipSelected = function ($field) use ($labApplication) {
             return !empty($labApplication->{$field});
         };
+
+        // Helpers to load dynamic form schema from $form
+        $formSchema = isset($form) && $form->form_schema ? (is_array($form->form_schema) ? $form->form_schema : json_decode($form->form_schema, true)) : null;
+
+        $getSectionTitle = function(int $sectionIndex, string $defaultTitle) use ($formSchema) {
+            return $formSchema['sections'][$sectionIndex]['title'] ?? $defaultTitle;
+        };
+
+        $getFieldLabel = function(int $sectionIndex, int $fieldIndex, string $defaultLabel) use ($formSchema) {
+            return $formSchema['sections'][$sectionIndex]['fields'][$fieldIndex]['label'] ?? $defaultLabel;
+        };
+
+        $getFieldName = function(int $sectionIndex, int $fieldIndex, string $defaultName) use ($formSchema) {
+            return $formSchema['sections'][$sectionIndex]['fields'][$fieldIndex]['name'] ?? $defaultName;
+        };
+
+        $getFieldType = function(int $sectionIndex, int $fieldIndex, string $defaultType) use ($formSchema) {
+            return $formSchema['sections'][$sectionIndex]['fields'][$fieldIndex]['type'] ?? $defaultType;
+        };
+
+        $basicInfoSection = [
+            'title' => $getSectionTitle(0, 'Basic Application / Laboratory Information'),
+            'fields' => [
+                0 => [
+                    'label' => $getFieldLabel(0, 0, 'Organization'),
+                    'name' => $getFieldName(0, 0, 'organisation'),
+                    'type' => $getFieldType(0, 0, 'text'),
+                ]
+            ]
+        ];
+
+        $aboutYourselfSection = [
+            'title' => $getSectionTitle(1, 'About Yourselves'),
+        ];
+
+        $aboutStaffSection = [
+            'title' => $getSectionTitle(2, 'About Your Staff'),
+        ];
+
+        $calibScopeSection = [
+            'title' => $getSectionTitle(3, 'Scope of Application - Calibration'),
+        ];
+
+        $testingScopeSection = [
+            'title' => $getSectionTitle(4, 'Scope of Application - Testing'),
+        ];
+
+        $calibFacilitySection = [
+            'title' => $getSectionTitle(5, 'Calibration Facility'),
+        ];
+
+        $otherApprovalsSection = [
+            'title' => $getSectionTitle(6, 'Other Approvals'),
+        ];
+
+        $declarationSection = [
+            'title' => $getSectionTitle(7, 'Declaration'),
+        ];
     @endphp
     {{-- @php
         $calibrationRows = json_decode($labApplication->scop_calib_field ?? '[]', true);
@@ -42,7 +100,7 @@
             data-open="{{ $openSection === 'basic_info' ? '1' : '0' }}">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div>
-                    <h5 class="mb-1">Basic Application / Laboratory Information</h5>
+                    <h5 class="mb-1">{{ $basicInfoSection['title'] }}</h5>
                     <p class="text-muted mb-0">General application details captured before Part 1.</p>
                 </div>
                 <span class="badge {{ $basicSaved ? 'bg-success' : 'bg-warning text-dark' }}"
@@ -55,13 +113,14 @@
                     @csrf
                     <input type="hidden" name="section" value="basic_info">
                     <div class="row g-3">
-                        <div class="col-md-4"><label class="form-label">Organization</label><input
-                                class="form-control @error('organisation') is-invalid @enderror" name="organisation"
-                                data-label="Accreditation Scheme" data-error="Please enter accreditation scheme."
-                                required maxlength="255" placeholder="Enter accreditation scheme"
-                                value="{{ old('organisation', $labApplication->certificationGeneral?->scheme) }}"><small
-                                class="field-error text-danger" data-error-for="organisation">
-                                @error('organisation')
+                        <div class="col-md-4"><label class="form-label">{{ $basicInfoSection['fields'][0]['label'] }}</label><input
+                                class="form-control @error($basicInfoSection['fields'][0]['name']) is-invalid @enderror" name="{{ $basicInfoSection['fields'][0]['name'] }}"
+                                type="{{ $basicInfoSection['fields'][0]['type'] }}"
+                                data-label="{{ $basicInfoSection['fields'][0]['label'] }}" data-error="Please enter {{ strtolower($basicInfoSection['fields'][0]['label']) }}."
+                                required maxlength="255" placeholder="Enter {{ strtolower($basicInfoSection['fields'][0]['label']) }}"
+                                value="{{ old($basicInfoSection['fields'][0]['name'], $labApplication->certificationGeneral?->scheme) }}"><small
+                                class="field-error text-danger" data-error-for="{{ $basicInfoSection['fields'][0]['name'] }}">
+                                @error($basicInfoSection['fields'][0]['name'])
                                     {{ $message }}
                                 @enderror
                             </small></div>
@@ -164,7 +223,7 @@
                 </form>
             @else
                 <div class="details-grid">
-                    <div class="detail-item"><span class="detail-label">Accreditation Scheme:</span><span
+                    <div class="detail-item"><span class="detail-label">{{ $basicInfoSection['fields'][0]['label'] }}:</span><span
                             class="detail-value">{{ $labApplication->certificationGeneral->scheme ?: '-' }}</span>
                     </div>
                     <div class="detail-item"><span class="detail-label">CAB Name:</span><span
@@ -224,7 +283,7 @@
             data-section="about_yourself" data-open="{{ $openSection === 'about_yourself' ? '1' : '0' }}">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div>
-                    <h5 class="mb-1">Step 1: About Yourselves</h5>
+                    <h5 class="mb-1">Step 1: {{ $aboutYourselfSection['title'] }}</h5>
                     <p class="text-muted mb-0">Part 1 - About yourselves</p>
                 </div>
                 <span class="badge {{ $aboutSaved ? 'bg-success' : 'bg-warning text-dark' }}"
@@ -391,7 +450,7 @@
             $schemeName = urldecode(request()->query('scheme_name', ''));
             $cards = [
                 'about_staff' => [
-                    'title' => 'Step 2: About Your Staff',
+                    'title' => 'Step 2: ' . $aboutStaffSection['title'],
                     'subtitle' => 'Technical management and quality manager details.',
                     'fields' => [
                         ['staff_name', 'Staff Name'],
@@ -404,7 +463,7 @@
                     'route' => 'application.saveAboutStaff',
                 ],
                 'testing_scope' => [
-                    'title' => 'Step 4: Scope of Application - Testing',
+                    'title' => 'Step 4: ' . $testingScopeSection['title'],
                     'subtitle' => 'Testing scope and major equipment records.',
                     'fields' => [
                         ['scop_materials', 'Materials / Products Tested'],
@@ -420,7 +479,7 @@
                     'route' => 'application.saveTestingScope',
                 ],
                 'other_approvals' => [
-                    'title' => 'Step 6: Other Approvals',
+                    'title' => 'Step 6: ' . $otherApprovalsSection['title'],
                     'subtitle' => 'Current approvals and validity.',
                     'fields' => [
                         ['approvals_name', 'Approval Body Name'],
@@ -462,7 +521,7 @@
 
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step {{ $stepNumber }}: Scope of Application - Calibration</h5>
+                            <h5 class="mb-1">Step {{ $stepNumber }}: {{ $calibScopeSection['title'] }}</h5>
                             <p class="text-muted mb-0">Field of measurement and calibration scope rows.</p>
                         </div>
                         <span class="badge {{ $saved ? 'bg-success' : 'bg-warning text-dark' }}">
@@ -584,7 +643,7 @@
 
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step {{ $stepNumber }}: Calibration Facility</h5>
+                            <h5 class="mb-1">Step {{ $stepNumber }}: {{ $calibFacilitySection['title'] }}</h5>
                             <p class="text-muted mb-0">Facility readiness and compliance checks.</p>
                         </div>
                         <span class="badge {{ $saved ? 'bg-success' : 'bg-warning text-dark' }}">
@@ -844,7 +903,7 @@
 
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step {{ $stepNumber }}: Declaration</h5>
+                            <h5 class="mb-1">Step {{ $stepNumber }}: {{ $declarationSection['title'] }}</h5>
                             <p class="text-muted mb-0">Applicant declaration and accreditation selection.</p>
                         </div>
                         <span class="badge {{ $saved ? 'bg-success' : 'bg-warning text-dark' }}">

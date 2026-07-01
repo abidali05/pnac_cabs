@@ -241,6 +241,9 @@ class ApplicationController extends Controller
         $countries = DB::table('countries')->pluck('en_short_name');
 
         $scheme_name = $request->scheme_name;
+        $form = \App\Models\ApplicationForm::where('application_name', $scheme_name)
+            ->orWhere('slug', \Str::slug($scheme_name))
+            ->first();
         $application = $request->application;
         $applicationId = session('application_id');
         $general = null;
@@ -377,7 +380,7 @@ class ApplicationController extends Controller
             'declaration' => ! empty($labApplication->signed) || ! empty($labApplication->date),
         ];
 
-        return view('admin.application.certification.index', compact('cbApplication', 'cbData', 'labApplication', 'savedSections', 'scopes', 'scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries'));
+        return view('admin.application.certification.index', compact('cbApplication', 'cbData', 'labApplication', 'savedSections', 'scopes', 'scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries', 'form'));
     }
 
     private function loadCbApplicationData(CbApplication $application): array
@@ -435,8 +438,18 @@ class ApplicationController extends Controller
     public function saveBasicInfo(Request $request, ApplicationForLab $applicationForLab)
     {
         // dd($request);
+        $scheme_name = $request->query('scheme_name');
+        $form = \App\Models\ApplicationForm::where('application_name', $scheme_name)
+            ->orWhere('slug', \Str::slug($scheme_name))
+            ->first();
+        
+        $orgFieldName = 'organisation';
+        if ($form && isset($form->form_schema['sections'][0]['fields'][0]['name'])) {
+            $orgFieldName = $form->form_schema['sections'][0]['fields'][0]['name'];
+        }
+
         $validator = Validator::make($request->all(), [
-            'organisation' => ['required', 'string', 'max:255'],
+            $orgFieldName => ['required', 'string', 'max:255'],
             'cab_name' => ['required', 'string', 'max:255'],
             'address_laboratory' => ['required', 'string', 'max:1000'],
             'tel' => ['required', 'string', 'min:7', 'max:30'],
@@ -461,7 +474,7 @@ class ApplicationController extends Controller
         ]);
 
         $general->fill([
-            'scheme' => $validated['organisation'],
+            'scheme' => $validated[$orgFieldName],
             'cab_name' => $validated['cab_name'],
             'address' => $validated['address_laboratory'],
             'telephone' => $validated['tel'],
