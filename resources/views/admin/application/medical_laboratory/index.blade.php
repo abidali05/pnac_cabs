@@ -352,16 +352,20 @@
                                     <h6 class="fw-bold">1.1 Name and position (Director level) of person authorising this
                                         application</h6>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Title</label><input class="form-control"
-                                        name="title" value="{{ old('title', $step1->title ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">Name</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">Title <span
+                                            class="text-danger">*</span></label><input class="form-control" name="title"
+                                        value="{{ old('title', $step1->title ?? '') }}" required></div>
+                                <div class="col-md-4"><label class="form-label">Name <span
+                                            class="text-danger">*</span></label><input class="form-control"
                                         name="contact_name" value="{{ old('contact_name', $step1->contact_name ?? '') }}"
                                         required></div>
-                                <div class="col-md-4"><label class="form-label">Position</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">Position <span
+                                            class="text-danger">*</span></label><input class="form-control"
                                         name="contact_designation"
-                                        value="{{ old('contact_designation', $step1->contact_designation ?? '') }}"></div>
+                                        value="{{ old('contact_designation', $step1->contact_designation ?? '') }}"
+                                        required></div>
 
-                                {{-- 1.2 Parent Organisation --}}
+                                {{-- 1.2 Parent Organisation (if any) — asterisk/required SKIP --}}
                                 <div class="col-12 mt-3">
                                     <h6 class="fw-bold">1.2 Name and address of the parent organisation (if any)</h6>
                                 </div>
@@ -374,9 +378,6 @@
                                 <div class="col-md-12"><label class="form-label">Address</label>
                                     <textarea class="form-control" name="parent_address" rows="2">{{ old('parent_address', $step1->parent_address ?? '') }}</textarea>
                                 </div>
-                                {{-- <div class="col-md-4"><label class="form-label">Postcode</label><input class="form-control"
-                                        name="parent_postcode"
-                                        value="{{ old('parent_postcode', $step1->parent_postcode ?? '') }}"></div> --}}
                                 <div class="col-md-4"><label class="form-label">Tel</label><input class="form-control"
                                         name="parent_tel" value="{{ old('parent_tel', $step1->parent_tel ?? '') }}"></div>
                                 <div class="col-md-4"><label class="form-label">Fax</label><input class="form-control"
@@ -387,26 +388,36 @@
                                     <h6 class="fw-bold">1.3 Address for invoicing (if different from the laboratory’s
                                         address)</h6>
                                 </div>
-                                <div class="col-md-12"><label class="form-label">Organisation</label><input
-                                        class="form-control" name="invoice_organisation"
-                                        value="{{ old('invoice_organisation', $step1->invoice_organisation ?? '') }}">
+                                <div class="col-md-12"><label class="form-label">Organisation <span
+                                            class="text-danger">*</span></label><input class="form-control"
+                                        name="invoice_organisation"
+                                        value="{{ old('invoice_organisation', $step1->invoice_organisation ?? '') }}"
+                                        required>
                                 </div>
-                                <div class="col-md-12"><label class="form-label">Address</label>
-                                    <textarea class="form-control" name="invoice_address" rows="2">{{ old('invoice_address', $step1->invoice_address ?? '') }}</textarea>
+                                <div class="col-md-12"><label class="form-label">Address <span
+                                            class="text-danger">*</span></label>
+                                    <textarea class="form-control" name="invoice_address" rows="2" required>{{ old('invoice_address', $step1->invoice_address ?? '') }}</textarea>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Postcode</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">Postcode <span
+                                            class="text-danger">*</span></label><input class="form-control"
                                         name="invoice_postcode"
-                                        value="{{ old('invoice_postcode', $step1->invoice_postcode ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">Tel</label><input class="form-control"
-                                        name="invoice_tel" value="{{ old('invoice_tel', $step1->invoice_tel ?? '') }}">
+                                        value="{{ old('invoice_postcode', $step1->invoice_postcode ?? '') }}" required>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Fax</label><input class="form-control"
-                                        name="invoice_fax" value="{{ old('invoice_fax', $step1->invoice_fax ?? '') }}">
+                                <div class="col-md-4"><label class="form-label">Tel <span
+                                            class="text-danger">*</span></label><input class="form-control"
+                                        name="invoice_tel" value="{{ old('invoice_tel', $step1->invoice_tel ?? '') }}"
+                                        required>
+                                </div>
+                                <div class="col-md-4"><label class="form-label">Fax <span
+                                            class="text-danger">*</span></label><input class="form-control"
+                                        name="invoice_fax" value="{{ old('invoice_fax', $step1->invoice_fax ?? '') }}"
+                                        required>
                                 </div>
 
                                 {{-- 1.4 Ownership --}}
                                 <div class="col-12 mt-3">
                                     <h6 class="fw-bold">1.4 Information about ownership: please tick the appropriate box.
+                                        <span class="text-danger">*</span>
                                     </h6>
                                 </div>
                                 <div class="col-md-12">
@@ -428,6 +439,7 @@
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="radio" name="ownership_type"
                                                         value="{{ $value }}" id="own_{{ $loop->index }}"
+                                                        @if ($loop->first) required @endif
                                                         @if ($selectedOwnership === $value) checked @endif>
                                                     <label class="form-check-label"
                                                         for="own_{{ $loop->index }}">{{ $label }}</label>
@@ -436,39 +448,42 @@
                                         @endforeach
                                     </div>
                                     <div class="mt-2">
-                                        <label class="form-label">Registration No. (if applicable)</label>
+                                        <label class="form-label">Registration No. (if applicable) <span
+                                                class="text-danger">*</span></label>
                                         <input class="form-control" name="registration_no"
-                                            value="{{ old('registration_no', $step1->registration_no ?? '') }}">
-                                        <label class="form-label">If Other, please describe</label>
-                                        <textarea class="form-control" name="ownership_other_description" rows="2">{{ old('ownership_other_description', $step1->ownership_other_description ?? '') }}</textarea>
+                                            value="{{ old('registration_no', $step1->registration_no ?? '') }}" required>
+                                        <label class="form-label">If Other, please describe <span
+                                                class="text-danger">*</span></label>
+                                        <textarea class="form-control" name="ownership_other_description" rows="2" required>{{ old('ownership_other_description', $step1->ownership_other_description ?? '') }}</textarea>
                                     </div>
                                 </div>
 
                                 {{-- 1.5 Main activity of parent company --}}
                                 <div class="col-12 mt-3">
-                                    <h6 class="fw-bold">1.5 Is testing the main activity of the parent company?</h6>
+                                    <h6 class="fw-bold">1.5 Is testing the main activity of the parent company? <span
+                                            class="text-danger">*</span></h6>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="radio" name="testing_main_activity"
-                                            value="yes" id="tma_yes"
+                                            value="yes" id="tma_yes" required
                                             @if (old('testing_main_activity', $step1->testing_main_activity ?? '') === 'yes') checked @endif>
                                         <label class="form-check-label" for="tma_yes">Yes</label>
                                     </div>
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="radio" name="testing_main_activity"
-                                            value="no" id="tma_no"
+                                            value="no" id="tma_no" required
                                             @if (old('testing_main_activity', $step1->testing_main_activity ?? '') === 'no') checked @endif>
                                         <label class="form-check-label" for="tma_no">No</label>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">If No, describe the main activities of the parent
-                                        company</label>
-                                    <textarea class="form-control" name="main_activity_description" rows="2">{{ old('main_activity_description', $step1->main_activity_description ?? '') }}</textarea>
+                                        company <span class="text-danger">*</span></label>
+                                    <textarea class="form-control" name="main_activity_description" rows="2" required>{{ old('main_activity_description', $step1->main_activity_description ?? '') }}</textarea>
                                 </div>
 
-                                {{-- 1.6 Consultant --}}
+                                {{-- 1.6 Consultant (if any) — asterisk/required SKIP --}}
                                 <div class="col-12 mt-3">
                                     <h6 class="fw-bold">1.6 Name of Consultant / Consultancy Firm (if any)</h6>
                                 </div>
@@ -522,13 +537,13 @@
                                 @endforeach
                                 <div class="col-md-12">
                                     <label class="form-label">If Sample Collection Centre is Yes, attach list of sample
-                                        collection centres (upload later)</label>
-                                    <input type="file" name="sample_collection_list" class="form-control">
+                                        collection centres (upload later) <span class="text-danger">*</span></label>
+                                    <input type="file" name="sample_collection_list" class="form-control" required>
                                 </div>
 
                                 {{-- Fields of Testing --}}
                                 <div class="col-12 mt-3">
-                                    <label class="form-label">Fields of Testing</label>
+                                    <label class="form-label">Fields of Testing <span class="text-danger">*</span></label>
                                     <div class="row">
                                         @php $fields = ['Clinical Chemistry', 'Haematology', 'Histopathology', 'Immunology', 'Microbiology', 'Molecular Biology']; @endphp
                                         @foreach ($fields as $field)

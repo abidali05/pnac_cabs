@@ -48,7 +48,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 class ApplicationController extends Controller
 {
@@ -988,6 +987,7 @@ class ApplicationController extends Controller
 
     }
 
+    // //////////////////////////////certification bodies section////////////////////////////////////
     // Store Document
     public function saveCbSection(Request $request, CbApplication $cbApplication, string $section)
     {
@@ -1245,37 +1245,9 @@ class ApplicationController extends Controller
 
         return back()->with('success', $message)->with('open_section', $section);
     }
+    // /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // public function documentStore(Request $request)
-    // {
-    //     // dd($request->all());
-    //     // $request->validate([
-    //     //     'document_id' => 'required|integer',
-    //     //     // 'category' => 'required|string',
-    //     //     'name' => 'required|string',
-    //     //     'number' => 'required|string',
-    //     //     'upload_doc' => 'required|file|mimes:pdf,jpg,png,docx|max:2048',
-    //     // ]);
-
-    //     if ($request->hasFile('upload_doc')) {
-    //         $file = $request->file('upload_doc');
-    //         $filename = date('dmy').'_sign_'.time().'.'.$file->getClientOriginalExtension();
-    //         $path = $file->storeAs('Documents_', $filename, 'public');
-    //     }
-    //     $usr_id = auth()->user()->id;
-
-    //     DocumentDetail::create([
-    //         'document_id' => $request->document_id,
-    //         'category' => $request->category,
-    //         'name' => $request->name,
-    //         'number' => $request->number,
-    //         'upload_doc' => $path,
-    //         'user_id' => $usr_id,
-    //     ]);
-
-    //     return response()->json(['success' => true, 'message' => 'Document created successfully']);
-    // }
-
+    // //////////////////////////////Medical Laboratries///////////////////////////////////////////////////
     private function loadMedicalLaboratoryData(MlabApplication $application): array
     {
         // Step 1: Organisation & Contact
@@ -1793,62 +1765,6 @@ class ApplicationController extends Controller
         }
     }
 
-    // public function uploadMlabDocument(Request $request, MlabApplication $application)
-    // {
-    //     $data = $request->validate([
-    //         'document_type' => 'required|string|max:100',
-    //         'document_file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:5120',
-    //     ]);
-
-    //     $existing = DB::table('mlab_documents')
-    //         ->where('mlab_application_id', $application->id)
-    //         ->where('document_type', $data['document_type'])
-    //         ->first();
-
-    //     if ($existing && Storage::disk('public')->exists($existing->file_path)) {
-    //         Storage::disk('public')->delete($existing->file_path);
-    //     }
-
-    //     $file = $request->file('document_file');
-    //     $safeType = Str::slug($data['document_type']);
-    //     $fileName = $safeType.'_'.now()->format('YmdHis').'.'.$file->getClientOriginalExtension();
-    //     $path = $file->storeAs("applications/medical-laboratory/{$application->id}/{$safeType}", $fileName, 'public');
-
-    //     DB::table('mlab_documents')->updateOrInsert(
-    //         [
-    //             'mlab_application_id' => $application->id,
-    //             'document_type' => $data['document_type'],
-    //         ],
-    //         [
-    //             'file_name' => $fileName,
-    //             'original_name' => $file->getClientOriginalName(),
-    //             'file_path' => $path,
-    //             'mime_type' => $file->getMimeType(),
-    //             'uploaded_by' => auth()->id(),
-    //             'updated_at' => now(),
-    //             'created_at' => $existing->created_at ?? now(),
-    //         ]
-    //     );
-
-    //     return back()->with('success', 'Document uploaded successfully.')->with('open_section', 'step7');
-    // }
-
-    // public function deleteMlabDocument(MlabApplication $application, int $document)
-    // {
-    //     $row = DB::table('mlab_documents')
-    //         ->where('mlab_application_id', $application->id)
-    //         ->where('id', $document)
-    //         ->first();
-
-    //     if ($row && Storage::disk('public')->exists($row->file_path)) {
-    //         Storage::disk('public')->delete($row->file_path);
-    //     }
-
-    //     DB::table('mlab_documents')->where('id', $document)->delete();
-
-    //     return back()->with('success', 'Document deleted successfully.')->with('open_section', 'step7');
-    // }
-
     public function submitedApplication()
     {
         $certifications = CertificationGeneral::with('application_statuses')->withWhereHas('declaration', function ($query) {
@@ -1877,6 +1793,7 @@ class ApplicationController extends Controller
         return view('admin.application.view_submited', compact('general', 'data', 'scopes', 'user', 'schemes', 'declarations'));
     }
 
+    // ////////////////////////////////////////////////////////////////////////////////////////////////
     public function getIafCodes(Request $request, $clusterId)
     {
         $iafCodes = FirstIafCode::where('technical_cluster_id', $clusterId)->where('code', $request->cluster_code)->get(['id', 'iaf_code', 'description']);

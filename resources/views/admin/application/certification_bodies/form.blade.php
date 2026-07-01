@@ -120,12 +120,12 @@
 @endphp
 
 <div class="pnac-vertical-form cb-application-form w-100">
-    @if (session('success'))
+    {{-- @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-    @if ($errors->any())
+    @endif --}}
+    {{-- @if ($errors->any())
         <div class="alert alert-danger">{{ $errors->first() }}</div>
-    @endif
+    @endif --}}
 
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h4 class="mb-0 text-success">Certification Bodies Accreditation Application</h4>
@@ -151,22 +151,27 @@
                 <form method="POST" action="{{ $sectionUrl('basic_info') }}" class="js-card-form cb-js-card-form">
                     @csrf
                     <div class="row g-3">
-                        <div class="col-md-4"><label class="form-label">Scheme Name</label><input class="form-control"
-                                name="scheme_name" value="{{ old('scheme_name', $cbApplication->scheme_name) }}"
-                                required></div>
-                        <div class="col-md-4"><label class="form-label">Application Type</label><input
-                                class="form-control" name="application_type"
+                        <div class="col-md-4"><label class="form-label">Scheme Name <span
+                                    class="text-danger">*</span></label><input class="form-control" name="scheme_name"
+                                value="{{ old('scheme_name', $cbApplication->scheme_name) }}" required></div>
+                        <div class="col-md-4"><label class="form-label">Application Type <span
+                                    class="text-danger">*</span></label><input class="form-control"
+                                name="application_type"
                                 value="{{ old('application_type', $cbApplication->application_type) }}" required></div>
-                        <div class="col-md-4"><label class="form-label">Application Number</label><input
-                                class="form-control" name="application_no"
+                        <div class="col-md-4"><label class="form-label">Application Number <span
+                                    class="text-danger">*</span></label><input class="form-control"
+                                name="application_no"
                                 value="{{ old('application_no', $cbApplication->application_no) }}" readonly></div>
 
-                        <div class="col-md-4"><label class="form-label">Status</label><input class="form-control"
+                        <div class="col-md-4"><label class="form-label">Status <span
+                                    class="text-danger">*</span></label><input class="form-control"
                                 value="{{ $cbApplication->status }}" readonly></div>
-                        <div class="col-md-4"><label class="form-label">Created By</label><input class="form-control"
+                        <div class="col-md-4"><label class="form-label">Created By <span
+                                    class="text-danger">*</span></label><input class="form-control"
                                 value="{{ optional($cbApplication->creator)->name ?? auth()->user()->name }}" readonly>
                         </div>
-                        <div class="col-md-4"><label class="form-label">Created Date</label><input class="form-control"
+                        <div class="col-md-4"><label class="form-label">Created Date <span
+                                    class="text-danger">*</span></label><input class="form-control"
                                 value="{{ optional($cbApplication->created_at)->format('Y-m-d') }}" readonly></div>
                     </div>
                     <div class="d-flex justify-content-end mt-3">
@@ -214,20 +219,26 @@
                     @csrf
                     <div class="row g-3">
                         {{-- <div class="col-md-3"><label class="form-label">Title</label><input class="form-control" name="authorized_person[title]" value="{{ $authorized->title ?? '' }}"></div> --}}
-                        <div class="col-md-5"><label class="form-label">Name</label><input class="form-control"
+                        <div class="col-md-5"><label class="form-label">Name <span
+                                    class="text-danger">*</span></label><input class="form-control"
                                 name="authorized_person[name]" value="{{ $authorized->name ?? '' }}" required></div>
-                        <div class="col-md-4"><label class="form-label">Position</label><input class="form-control"
-                                name="authorized_person[position]" value="{{ $authorized->position ?? '' }}"></div>
+                        <div class="col-md-4"><label class="form-label">Position <span
+                                    class="text-danger">*</span></label><input class="form-control"
+                                name="authorized_person[position]" value="{{ $authorized->position ?? '' }}" required>
+                        </div>
                         @foreach (['parent_organization' => 'Parent Organization', 'relationship' => 'Relationship', 'postcode' => 'Postcode', 'telephone' => 'Telephone', 'fax' => 'Fax'] as $field => $label)
-                            <div class="col-md-4"><label class="form-label">{{ $label }}</label><input
-                                    class="form-control" name="parent_organization[{{ $field }}]"
-                                    value="{{ $parent->{$field} ?? '' }}"></div>
+                            <div class="col-md-4"><label class="form-label">{{ $label }} <span
+                                        class="text-danger">*</span></label><input class="form-control"
+                                    name="parent_organization[{{ $field }}]"
+                                    value="{{ $parent->{$field} ?? '' }}" required></div>
                         @endforeach
-                        <div class="col-md-8"><label class="form-label">Parent Address</label><input
-                                class="form-control" name="parent_organization[address]"
-                                value="{{ $parent->address ?? '' }}"></div>
-                        <div class="col-md-4"><label class="form-label">Ownership</label><select
-                                class="form-control cb-ownership-select" name="parent_organization[ownership_type]">
+                        <div class="col-md-8"><label class="form-label">Parent Address <span
+                                    class="text-danger">*</span></label><input class="form-control"
+                                name="parent_organization[address]" value="{{ $parent->address ?? '' }}" required>
+                        </div>
+                        <div class="col-md-4"><label class="form-label">Ownership <span
+                                    class="text-danger">*</span></label><select class="form-control cb-ownership-select"
+                                name="parent_organization[ownership_type]" required>
                                 <option value="">Select</option>
                                 @foreach (['Individual', 'Public Limited Company', 'Private Company', 'Partnership', 'Learned Institution', 'Academic Institution', 'Public Body', 'Other'] as $type)
                                     <option value="{{ $type }}" @selected(($parent->ownership_type ?? '') === $type)>
@@ -235,29 +246,32 @@
                                 @endforeach
                             </select></div>
                         <div class="col-md-8 cb-ownership-other"><label class="form-label">Other
-                                Description</label><input class="form-control"
+                                Description <span class="text-danger">*</span></label><input class="form-control"
                                 name="parent_organization[ownership_other_description]"
-                                value="{{ $parent->ownership_other_description ?? '' }}"></div>
-                        <div class="col-md-4"><label class="form-label">Main Activity?</label><select
-                                class="form-control cb-main-activity-select" name="parent_organization[main_activity]">
+                                value="{{ $parent->ownership_other_description ?? '' }}" required></div>
+                        <div class="col-md-4"><label class="form-label">Main Activity? <span
+                                    class="text-danger">*</span></label><select
+                                class="form-control cb-main-activity-select" name="parent_organization[main_activity]"
+                                required>
                                 <option value="">Select</option>
                                 <option value="yes" @selected(($parent->main_activity ?? '') === 'yes')>Yes</option>
                                 <option value="no" @selected(($parent->main_activity ?? '') === 'no')>No</option>
                             </select></div>
                         <div class="col-md-8 cb-main-activity-description"><label class="form-label">If No,
-                                describe</label>
-                            <textarea class="form-control" name="parent_organization[main_activity_description]">{{ $parent->main_activity_description ?? '' }}</textarea>
+                                describe <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="parent_organization[main_activity_description]" required>{{ $parent->main_activity_description ?? '' }}</textarea>
                         </div>
                         @foreach (['organization' => 'Invoice Organization', 'address' => 'Invoice Address', 'postcode' => 'Invoice Postcode', 'telephone' => 'Invoice Telephone', 'fax' => 'Invoice Fax'] as $field => $label)
-                            <div class="col-md-4"><label class="form-label">{{ $label }}</label><input
-                                    class="form-control" name="invoice_address[{{ $field }}]"
-                                    value="{{ $invoice->{$field} ?? '' }}"></div>
+                            <div class="col-md-4"><label class="form-label">{{ $label }} <span
+                                        class="text-danger">*</span></label><input class="form-control"
+                                    name="invoice_address[{{ $field }}]"
+                                    value="{{ $invoice->{$field} ?? '' }}" required></div>
                         @endforeach
                         @foreach (['consultant_name' => 'Consultant Name', 'organization' => 'Consultant Organization', 'address' => 'Consultant Address', 'postcode' => 'Consultant Postcode', 'telephone' => 'Consultant Telephone', 'fax' => 'Consultant Fax', 'email' => 'Consultant Email'] as $field => $label)
-                            <div class="col-md-4"><label class="form-label">{{ $label }}</label><input
-                                    class="form-control" name="consultant[{{ $field }}]"
-                                    value="{{ $consultant->{$field} ?? '' }}"
-                                    @if ($field === 'email') type="email" @endif></div>
+                            <div class="col-md-4"><label class="form-label">{{ $label }} <span
+                                        class="text-danger">*</span></label><input class="form-control"
+                                    name="consultant[{{ $field }}]" value="{{ $consultant->{$field} ?? '' }}"
+                                    required @if ($field === 'email') type="email" @endif></div>
                         @endforeach
                     </div>
                     <div class="d-flex justify-content-end mt-3"><button class="btn btn-success btn-sm">Save
@@ -341,6 +355,7 @@
                             array_fill_keys(array_keys($staffColumns), '')),
                         'columns' => $staffColumns,
                         'isLocked' => $isLocked,
+                        'allowMultiple' => true,
                     ])
                     @include('admin.application.certification_bodies._repeatable_table', [
                         'title' => 'Permanent Auditors',
@@ -351,6 +366,7 @@
                             array_fill_keys(array_keys($auditorColumns), '')),
                         'columns' => $auditorColumns,
                         'isLocked' => $isLocked,
+                        'allowMultiple' => true,
                     ])
                     @include('admin.application.certification_bodies._repeatable_table', [
                         'title' => 'Freelance/Subcontracted Auditors',
@@ -361,6 +377,7 @@
                             array_fill_keys(array_keys($auditorColumns), '')),
                         'columns' => $auditorColumns,
                         'isLocked' => $isLocked,
+                        'allowMultiple' => true,
                     ])
                     <div class="d-flex justify-content-end mt-3"><button class="btn btn-success btn-sm">Save
                             Draft</button></div>
@@ -406,6 +423,7 @@
                                 array_fill_keys(array_keys($group['columns']), '')),
                             'columns' => $group['columns'],
                             'isLocked' => $isLocked,
+                            'allowMultiple' => true,
                         ])
                     @endforeach
                     <div class="d-flex justify-content-end mt-3"><button class="btn btn-success btn-sm">Save
@@ -425,7 +443,6 @@
         @php
             $nonComplianceRows = $cbData['non_compliance'] ?? collect();
 
-            // Detect compliance from stored rows (not from an injected fallback row)
             $qualityComplies =
                 optional(
                     $nonComplianceRows instanceof \Illuminate\Support\Collection
@@ -443,7 +460,6 @@
                         : 'yes';
             }
 
-            // For edit UI, only show fields relevant to the selected compliance.
             $qualityRows =
                 $qualityComplies === 'no'
                     ? ($nonComplianceRows instanceof \Illuminate\Support\Collection && $nonComplianceRows->isNotEmpty()
@@ -470,13 +486,13 @@
                     class="js-card-form cb-js-card-form">
                     @csrf
                     <label class="fw-semibold">Does the Certification Body comply with ISO/IEC 17021-1 and PNAC
-                        requirements?</label>
+                        requirements? <span class="text-danger">*</span></label>
                     <div class="mb-3">
                         <label class="form-check form-check-inline"><input class="form-check-input cb-quality-toggle"
-                                type="radio" name="complies" value="yes" @checked($qualityComplies === 'yes')>
+                                type="radio" name="complies" value="yes" required @checked($qualityComplies === 'yes')>
                             Yes</label>
                         <label class="form-check form-check-inline"><input class="form-check-input cb-quality-toggle"
-                                type="radio" name="complies" value="no" @checked($qualityComplies === 'no')>
+                                type="radio" name="complies" value="no" required @checked($qualityComplies === 'no')>
                             No</label>
                     </div>
                     <div class="cb-non-compliance-wrap">
@@ -490,6 +506,7 @@
                                 'rectification_date' => 'Rectification Date',
                             ],
                             'isLocked' => $isLocked,
+                            'allowMultiple' => true,
                         ])
                     </div>
                     <div class="d-flex justify-content-end mt-3"><button class="btn btn-success btn-sm">Save
@@ -547,6 +564,7 @@
                             'expiry_date' => 'Expiry Date',
                         ],
                         'isLocked' => $isLocked,
+                        'allowMultiple' => true,
                     ])
                     <div class="d-flex justify-content-end mt-3"><button class="btn btn-success btn-sm">Save
                             Draft</button></div>
@@ -578,15 +596,18 @@
                                     type="checkbox" name="declaration_accepted" value="1"
                                     @checked($declaration->declaration_accepted ?? false) required> <span class="form-check-label">I declare
                                     that the information given in this form is correct to the best of my knowledge and
-                                    belief.</span></label></div>
-                        <div class="col-md-4"><label class="form-label">Applicant Fee Amount</label><input
-                                class="form-control" name="applicant_fee_amount"
-                                value="{{ $declaration->applicant_fee_amount ?? '' }}" required></div>
-                        <div class="col-md-4"><label class="form-label">Digital Signature Name</label><input
-                                class="form-control" name="digital_signature_name"
+                                    belief. <span class="text-danger">*</span></span></label></div>
+                        <div class="col-md-4"><label class="form-label">Applicant Fee Amount <span
+                                    class="text-danger">*</span></label><input class="form-control"
+                                name="applicant_fee_amount" value="{{ $declaration->applicant_fee_amount ?? '' }}"
+                                required></div>
+                        <div class="col-md-4"><label class="form-label">Digital Signature Name <span
+                                    class="text-danger">*</span></label><input class="form-control"
+                                name="digital_signature_name"
                                 value="{{ $declaration->digital_signature_name ?? '' }}" required></div>
-                        <div class="col-md-4"><label class="form-label">Signed Date</label><input type="date"
-                                class="form-control" name="signed_date"
+                        <div class="col-md-4"><label class="form-label">Signed Date <span
+                                    class="text-danger">*</span></label><input type="date" class="form-control"
+                                name="signed_date"
                                 value="{{ optional($declaration)->signed_date ?? now()->format('Y-m-d') }}" required>
                         </div>
                     </div>
@@ -611,3 +632,32 @@
         </div>
     </div>
 </div>
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            @if ($errors->any())
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    html: `<ul class="text-start mb-0">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>`,
+                    confirmButtonText: 'OK'
+                });
+            @endif
+
+            @if (session('success'))
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: @json(session('success')),
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            @endif
+        });
+    </script>
+@endpush
