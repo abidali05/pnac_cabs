@@ -67,7 +67,7 @@
     @endphp
 
     @foreach ($qSections as $sectionTitle => $questions)
-        <h6 class="fw-bold text-success mt-3 mb-2">{{ $sectionTitle }}</h6>
+        <h6 class="fw-bold text-success mt-3 mb-2">{{ $getSection($sectionTitle) ? $getSection($sectionTitle)['title'] : $sectionTitle }}</h6>
         <div class="table-responsive mb-3">
             <table class="table table-bordered table-sm align-middle">
                 <thead class="table-light">
@@ -81,7 +81,7 @@
                 <tbody>
                     @foreach ($questions as $code => $label)
                         <tr>
-                            <td>{{ $label }}</td>
+                            <td>{{ $getLabel($sectionTitle, $code, $label) }}</td>
                             <td class="text-center">
                                 <input type="radio" name="qs[{{ $code }}][answer]" value="yes"
                                     @if (($qs[$code]->answer ?? '') === 'yes') checked @endif>
@@ -102,7 +102,7 @@
 
     {{-- Overall Compliance --}}
     <div class="mt-3 mb-2">
-        <label class="fw-semibold">Does the HCB comply with PNAC requirements for Halal Certification Bodies?</label>
+        <label class="fw-semibold">{{ $getLabel('Overall Compliance', 'does_the_hcb_comply_with_pnac_requirements_for_halal_certification_bodies', 'Does the HCB comply with PNAC requirements for Halal Certification Bodies?') }}</label>
         <div class="mt-1">
             <label class="form-check form-check-inline">
                 <input class="form-check-input hcb-comply-toggle" type="radio" name="complies" value="yes"
@@ -117,16 +117,13 @@
 
     <div class="hcb-non-comply-wrap {{ $compliesValue === 'yes' ? 'd-none' : '' }}">
         @include('admin.application.certification_bodies._repeatable_table', [
-            'title' => 'Non-Compliance Areas',
+            'title' => $ncTitle,
             'target' => 'hcbNonComplyRows',
             'name' => 'non_compliances',
-            'rows' => $firstRow($nonComply, ['area_of_non_compliance' => '', 'rectified_by_date' => '']),
-            'columns' => [
-                'area_of_non_compliance' => 'Area of Non-Compliance',
-                'rectified_by_date' => 'Rectified By Date',
-            ],
+            'rows' => $firstRow($nonComply, array_fill_keys(array_keys($ncCols), '')),
+            'columns' => $ncCols,
             'isLocked' => $isLocked,
-            'disableRequired' => true, // 👈 ADD THIS
+            'disableRequired' => true,
         ])
     </div>
 

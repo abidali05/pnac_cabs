@@ -2,16 +2,11 @@
     @csrf
 
     @include('admin.application.certification_bodies._repeatable_table', [
-        'title'    => 'Scope of Halal Certification',
+        'title'    => $scopeTitle,
         'target'   => 'hcbScopeRows',
         'name'     => 'scopes',
-        'rows'     => $firstRow($scopes, ['category_code'=>'','category'=>'','subcategory'=>'','included_activities'=>'']),
-        'columns'  => [
-            'category_code'       => 'Cat. Code',
-            'category'            => 'Category',
-            'subcategory'         => 'Sub Category',
-            'included_activities' => 'Included Activities',
-        ],
+        'rows'     => $firstRow($scopes, array_fill_keys(array_keys($scopeCols), '')),
+        'columns'  => $scopeCols,
         'isLocked' => $isLocked,
     ])
 
