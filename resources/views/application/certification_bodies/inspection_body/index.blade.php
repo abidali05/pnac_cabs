@@ -156,6 +156,173 @@
         : collect([$fallback]);
     $val = fn($row, $field) => is_array($row) ? $row[$field] ?? '' : $row->{$field} ?? '';
 
+    // Load form from DB
+    $form = $form ?? \App\Models\ApplicationForm::where('application_name', 'Inspection Bodies')->orWhere('slug', \Str::slug('Inspection Bodies'))->first();
+    $schema = $form?->form_schema;
+
+    $getSection = function ($titleOrIndex) use ($schema) {
+        if (!$schema || !isset($schema['sections'])) {
+            return null;
+        }
+        if (is_int($titleOrIndex)) {
+            return $schema['sections'][$titleOrIndex] ?? null;
+        }
+        foreach ($schema['sections'] as $sec) {
+            if (strcasecmp($sec['title'] ?? '', $titleOrIndex) === 0) {
+                return $sec;
+            }
+        }
+        return null;
+    };
+
+    $fieldIndexMap = [
+        'Inspection Body Information' => [
+            'inspection_body_name' => 0,
+            'address' => 1,
+        ],
+        'Parent Organization (if any)' => [
+            'parent_organization' => 0,
+            'relationship' => 1,
+            'parent_address' => 2,
+            'parent_postcode' => 3,
+            'parent_tel' => 4,
+            'parent_fax' => 5,
+        ],
+        'Invoice Address (if different)' => [
+            'invoice_organization' => 0,
+            'invoice_address' => 1,
+            'invoice_postcode' => 2,
+            'invoice_tel' => 3,
+            'invoice_fax' => 4,
+        ],
+        'Establishment & Legal Status' => [
+            'date_of_establishment' => 0,
+            'legal_status' => 1,
+        ],
+        'Outside Pakistan Work' => [
+            'outside_pakistan' => 0,
+            'countries_description' => 1,
+        ],
+        'Is Inspection the Main Activity?' => [
+            'inspection_main_activity' => 0,
+            'activity_description' => 1,
+        ],
+        'Consultant / Consultancy Firm (if any)' => [
+            'consultant_name' => 0,
+            'consultant_organization' => 1,
+            'consultant_address' => 2,
+            'consultant_postcode' => 3,
+            'consultant_tel' => 4,
+            'consultant_fax' => 5,
+            'consultant_email' => 6,
+        ],
+        'Chief Executive' => [
+            'name' => 0,
+            'qualifications' => 1,
+            'experience' => 2,
+        ],
+        'Quality Management Representative' => [
+            'name' => 0,
+            'qualifications' => 1,
+            'experience' => 2,
+        ],
+        'Management Members' => [
+            'name' => 0,
+            'qualifications' => 1,
+            'experience' => 2,
+        ],
+        'Permanent Inspectors' => [
+            'name' => 0,
+            'qualification' => 1,
+            'inspection_field' => 2,
+            'inspection_experience' => 3,
+        ],
+        'Freelance / Subcontracted Inspectors' => [
+            'name' => 0,
+            'qualification' => 1,
+            'inspection_field' => 2,
+            'inspection_experience' => 3,
+        ],
+        'Scope of Inspection' => [
+            'description_of_inspection' => 0,
+            'type_and_range' => 1,
+            'methods_and_procedures' => 2,
+        ],
+        'Equipment' => [
+            'equipment_name' => 0,
+            'calibration_organization' => 1,
+            'calibration_frequency' => 2,
+            'last_calibration_date' => 3,
+        ],
+        'Inspection Body Type Declaration' => [
+            'type_a' => 0,
+            'type_b' => 1,
+            'type_c' => 2,
+        ],
+        'Declarations' => [
+            'iso17020_compliance' => 0,
+            'assessment_understanding' => 1,
+            'agreement_acceptance' => 2,
+            'quality_manual_attached' => 3,
+            'document_review_attached' => 4,
+        ],
+        'Applicant Fee & Signature' => [
+            'applicant_fee' => 0,
+            'declaration_name' => 1,
+            'declaration_date' => 2,
+        ],
+    ];
+
+    $getLabel = function ($sectionTitleOrIndex, $fieldIndexOrName, $fallback = '') use ($getSection, $fieldIndexMap) {
+        $sec = $getSection($sectionTitleOrIndex);
+        if (!$sec || !isset($sec['fields'])) {
+            return $fallback;
+        }
+        if (is_int($fieldIndexOrName)) {
+            return $sec['fields'][$fieldIndexOrName]['label'] ?? $fallback;
+        }
+        $secTitle = $sec['title'] ?? '';
+        if (isset($fieldIndexMap[$secTitle][$fieldIndexOrName])) {
+            $idx = $fieldIndexMap[$secTitle][$fieldIndexOrName];
+            if (isset($sec['fields'][$idx]['label'])) {
+                return $sec['fields'][$idx]['label'];
+            }
+        }
+        foreach ($sec['fields'] as $fld) {
+            if (strcasecmp($fld['name'] ?? '', $fieldIndexOrName) === 0) {
+                return $fld['label'] ?? $fallback;
+            }
+        }
+        return $fallback;
+    };
+
+    $getColumns = function ($sectionTitleOrIndex, $fallbackColumns) use ($getSection, $fieldIndexMap) {
+        $sec = $getSection($sectionTitleOrIndex);
+        if (!$sec || !isset($sec['fields'])) {
+            return $fallbackColumns;
+        }
+        $cols = [];
+        $secTitle = $sec['title'] ?? '';
+        foreach ($fallbackColumns as $field => $fallbackLabel) {
+            $label = $fallbackLabel;
+            if (isset($fieldIndexMap[$secTitle][$field])) {
+                $idx = $fieldIndexMap[$secTitle][$field];
+                if (isset($sec['fields'][$idx]['label'])) {
+                    $label = $sec['fields'][$idx]['label'];
+                }
+            } else {
+                foreach ($sec['fields'] as $fld) {
+                    if (strcasecmp($fld['name'] ?? '', $field) === 0) {
+                        $label = $fld['label'] ?? $fallbackLabel;
+                        break;
+                    }
+                }
+            }
+            $cols[$field] = $label;
+        }
+        return $cols;
+    };
+
     $renderDetails = function (array $items) {
         echo '<div class="details-grid">';
         foreach ($items as $label => $v) {
@@ -218,7 +385,7 @@
                     data-open="{{ $openSection === 'step1' ? '1' : '0' }}">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step 1: Organization Details</h5>
+                            <h5 class="mb-1">Step 1: {{ $getSection('Inspection Body Information') ? $getSection('Inspection Body Information')['title'] : 'Organization Details' }}</h5>
                             <p class="text-muted mb-0">Inspection body, contact, parent, invoice & consultant.</p>
                         </div>
                         <span class="badge {{ $isSaved('step1') ? 'bg-success' : 'bg-warning text-dark' }}">
@@ -230,24 +397,26 @@
                             'org' => $org,
                             'isLocked' => $isLocked,
                             'stepUrl' => $stepUrl('step1'),
+                            'getSection' => $getSection,
+                            'getLabel' => $getLabel,
+                            'getColumns' => $getColumns,
                         ])
                     @else
                         @php
                             $renderDetails([
-                                'Inspection Body Name' => $org->inspection_body_name ?? '',
-                                'Address' => $org->address ?? '',
-                                'Parent Organization' => $org->parent_organization ?? '',
-                                'Relationship' => $org->relationship ?? '',
-                                'Parent Address' => $org->parent_address ?? '',
-                                'Parent Postcode' => $org->parent_postcode ?? '',
-                                'Parent Tel' => $org->parent_tel ?? '',
-                                'Parent Fax' => $org->parent_fax ?? '',
-
-                                'Legal Status' => $org->legal_status ?? '',
-                                'Date of Establishment' => $org->date_of_establishment ?? '',
-                                'Outside Pakistan' => $org->outside_pakistan ?? '',
-                                'Consultant Name' => $org->consultant_name ?? '',
-                                'Consultant Email' => $org->consultant_email ?? '',
+                                $getLabel('Inspection Body Information', 'inspection_body_name', 'Inspection Body Name') => $org->inspection_body_name ?? '',
+                                $getLabel('Inspection Body Information', 'address', 'Address') => $org->address ?? '',
+                                $getLabel('Parent Organization (if any)', 'parent_organization', 'Parent Organization') => $org->parent_organization ?? '',
+                                $getLabel('Parent Organization (if any)', 'relationship', 'Relationship') => $org->relationship ?? '',
+                                $getLabel('Parent Organization (if any)', 'parent_address', 'Parent Address') => $org->parent_address ?? '',
+                                $getLabel('Parent Organization (if any)', 'parent_postcode', 'Parent Postcode') => $org->parent_postcode ?? '',
+                                $getLabel('Parent Organization (if any)', 'parent_tel', 'Parent Tel') => $org->parent_tel ?? '',
+                                $getLabel('Parent Organization (if any)', 'parent_fax', 'Parent Fax') => $org->parent_fax ?? '',
+                                $getLabel('Establishment & Legal Status', 'legal_status', 'Legal Status') => $org->legal_status ?? '',
+                                $getLabel('Establishment & Legal Status', 'date_of_establishment', 'Date of Establishment') => $org->date_of_establishment ?? '',
+                                $getLabel('Outside Pakistan Work', 'outside_pakistan', 'Outside Pakistan') => $org->outside_pakistan ?? '',
+                                $getLabel('Consultant / Consultancy Firm (if any)', 'consultant_name', 'Consultant Name') => $org->consultant_name ?? '',
+                                $getLabel('Consultant / Consultancy Firm (if any)', 'consultant_email', 'Consultant Email') => $org->consultant_email ?? '',
                             ]);
                         @endphp
                         <div class="d-flex justify-content-end mt-3">
@@ -262,13 +431,31 @@
                     $mgmtMembers = $data['mgmt_members'] ?? collect();
                     $inspectors = $data['inspectors'] ?? collect();
                     $freelance = $data['freelance'] ?? collect();
-                    $staffCols = ['name' => 'Name', 'qualifications' => 'Qualifications', 'experience' => 'Experience'];
-                    $inspCols = [
+                    
+                    $ceTitle = $getSection('Chief Executive') ? $getSection('Chief Executive')['title'] : 'Chief Executive';
+                    $ceCols = $getColumns('Chief Executive', ['name' => 'Name', 'qualifications' => 'Qualifications', 'experience' => 'Experience']);
+                    
+                    $qmrTitle = $getSection('Quality Management Representative') ? $getSection('Quality Management Representative')['title'] : 'Quality Management Representative';
+                    $qmrCols = $getColumns('Quality Management Representative', ['name' => 'Name', 'qualifications' => 'Qualifications', 'experience' => 'Experience']);
+                    
+                    $mgmtTitle = $getSection('Management Members') ? $getSection('Management Members')['title'] : 'Management Members';
+                    $mgmtCols = $getColumns('Management Members', ['name' => 'Name', 'qualifications' => 'Qualifications', 'experience' => 'Experience']);
+                    
+                    $permTitle = $getSection('Permanent Inspectors') ? $getSection('Permanent Inspectors')['title'] : 'Permanent Inspectors';
+                    $permCols = $getColumns('Permanent Inspectors', [
                         'name' => 'Name',
                         'qualification' => 'Qualification',
                         'inspection_field' => 'Inspection Field',
                         'inspection_experience' => 'Experience',
-                    ];
+                    ]);
+                    
+                    $freelanceTitle = $getSection('Freelance / Subcontracted Inspectors') ? $getSection('Freelance / Subcontracted Inspectors')['title'] : 'Freelance / Subcontracted Inspectors';
+                    $freelanceCols = $getColumns('Freelance / Subcontracted Inspectors', [
+                        'name' => 'Name',
+                        'qualification' => 'Qualification',
+                        'inspection_field' => 'Inspection Field',
+                        'inspection_experience' => 'Experience',
+                    ]);
                 @endphp
                 <div class="border rounded p-3 p-md-4 mb-3 bg-white pnac-step-card" data-section="step2"
                     data-open="{{ $openSection === 'step2' ? '1' : '0' }}">
@@ -284,26 +471,40 @@
                     @if ($isEditing('step2'))
                         @include(
                             'application.certification_bodies.inspection_body.steps.step2',
-                            compact(
-                                'staffRoles',
-                                'mgmtMembers',
-                                'inspectors',
-                                'freelance',
-                                'isLocked',
-                                'staffCols',
-                                'inspCols',
-                                'firstRow'))
+                            [
+                                'staffRoles' => $staffRoles,
+                                'mgmtMembers' => $mgmtMembers,
+                                'inspectors' => $inspectors,
+                                'freelance' => $freelance,
+                                'isLocked' => $isLocked,
+                                'staffCols' => $ceCols, // will map inside step2
+                                'inspCols' => $permCols, // will map inside step2
+                                'firstRow' => $firstRow,
+                                'getSection' => $getSection,
+                                'getLabel' => $getLabel,
+                                'getColumns' => $getColumns,
+                                'ceTitle' => $ceTitle,
+                                'ceCols' => $ceCols,
+                                'qmrTitle' => $qmrTitle,
+                                'qmrCols' => $qmrCols,
+                                'mgmtTitle' => $mgmtTitle,
+                                'mgmtCols' => $mgmtCols,
+                                'permTitle' => $permTitle,
+                                'permCols' => $permCols,
+                                'freelanceTitle' => $freelanceTitle,
+                                'freelanceCols' => $freelanceCols,
+                            ])
                     @else
-                        <h6><strong>Chief Executive</strong></h6>
-                        @php $renderTable($staffRoles->get('Chief Executive',collect()),$staffCols); @endphp
-                        <h6 class="mt-4"><strong>Quality Management Representative</strong></h6>
-                        @php $renderTable($staffRoles->get('Quality Management Representative',collect()),$staffCols); @endphp
-                        <h6 class="mt-4"><strong>Management Members</strong></h6>
-                        @php $renderTable($mgmtMembers,$staffCols); @endphp
-                        <h6 class="mt-4"><strong>Permanent Inspectors</strong></h6>
-                        @php $renderTable($inspectors,$inspCols); @endphp
-                        <h6 class="mt-4"><strong>Freelance Inspectors</strong></h6>
-                        @php $renderTable($freelance,$inspCols); @endphp
+                        <h6><strong>{{ $ceTitle }}</strong></h6>
+                        @php $renderTable($staffRoles->get('Chief Executive',collect()), $ceCols); @endphp
+                        <h6 class="mt-4"><strong>{{ $qmrTitle }}</strong></h6>
+                        @php $renderTable($staffRoles->get('Quality Management Representative',collect()), $qmrCols); @endphp
+                        <h6 class="mt-4"><strong>{{ $mgmtTitle }}</strong></h6>
+                        @php $renderTable($mgmtMembers, $mgmtCols); @endphp
+                        <h6 class="mt-4"><strong>{{ $permTitle }}</strong></h6>
+                        @php $renderTable($inspectors, $permCols); @endphp
+                        <h6 class="mt-4"><strong>{{ $freelanceTitle }}</strong></h6>
+                        @php $renderTable($freelance, $freelanceCols); @endphp
                         <div class="d-flex justify-content-end mt-3">
                             <a href="{{ $editUrl('step2') }}" class="btn btn-outline-success btn-sm">Edit</a>
                         </div>
@@ -314,6 +515,21 @@
                 @php
                     $scopes = $data['scopes'] ?? collect();
                     $equipment = $data['equipment'] ?? collect();
+                    
+                    $scopeTitle = $getSection('Scope of Inspection') ? $getSection('Scope of Inspection')['title'] : 'Scope of Inspection';
+                    $scopeCols = $getColumns('Scope of Inspection', [
+                        'description_of_inspection' => 'Description of Inspection',
+                        'type_and_range' => 'Type and Range',
+                        'methods_and_procedures' => 'Methods and Procedures',
+                    ]);
+                    
+                    $equipTitle = $getSection('Equipment') ? $getSection('Equipment')['title'] : 'Equipment';
+                    $equipCols = $getColumns('Equipment', [
+                        'equipment_name' => 'Equipment Name',
+                        'calibration_organization' => 'Calibration Organization',
+                        'calibration_frequency' => 'Calibration Frequency',
+                        'last_calibration_date' => 'Last Calibration Date',
+                    ]);
                 @endphp
                 <div class="border rounded p-3 p-md-4 mb-3 bg-white pnac-step-card" data-section="step3"
                     data-open="{{ $openSection === 'step3' ? '1' : '0' }}">
@@ -329,12 +545,24 @@
                     @if ($isEditing('step3'))
                         @include(
                             'application.certification_bodies.inspection_body.steps.step3',
-                            compact('scopes', 'equipment', 'isLocked', 'firstRow'))
+                            [
+                                'scopes' => $scopes,
+                                'equipment' => $equipment,
+                                'isLocked' => $isLocked,
+                                'firstRow' => $firstRow,
+                                'getSection' => $getSection,
+                                'getLabel' => $getLabel,
+                                'getColumns' => $getColumns,
+                                'scopeTitle' => $scopeTitle,
+                                'scopeCols' => $scopeCols,
+                                'equipTitle' => $equipTitle,
+                                'equipCols' => $equipCols,
+                            ])
                     @else
-                        <h6><strong>Scope of Inspection</strong></h6>
-                        @php $renderTable($scopes,['description_of_inspection'=>'Description','type_and_range'=>'Type & Range','methods_and_procedures'=>'Methods & Procedures']); @endphp
-                        <h6 class="mt-4"><strong>Equipment</strong></h6>
-                        @php $renderTable($equipment,['equipment_name'=>'Equipment Name','calibration_organization'=>'Calibration Org','calibration_frequency'=>'Frequency','last_calibration_date'=>'Last Calibration']); @endphp
+                        <h6><strong>{{ $scopeTitle }}</strong></h6>
+                        @php $renderTable($scopes, $scopeCols); @endphp
+                        <h6 class="mt-4"><strong>{{ $equipTitle }}</strong></h6>
+                        @php $renderTable($equipment, $equipCols); @endphp
                         <div class="d-flex justify-content-end mt-3">
                             <a href="{{ $editUrl('step3') }}" class="btn btn-outline-success btn-sm">Edit</a>
                         </div>
@@ -347,7 +575,7 @@
                     data-open="{{ $openSection === 'step4' ? '1' : '0' }}">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step 4: Declaration &amp; Submit</h5>
+                            <h5 class="mb-1">Step 4: {{ $getSection('Declarations') ? $getSection('Declarations')['title'] : 'Declaration & Submit' }}</h5>
                             <p class="text-muted mb-0">Inspection body type declaration, agreement, and final submission.
                             </p>
                         </div>
@@ -358,24 +586,30 @@
                     @if ($isEditing('step4'))
                         @include(
                             'application.certification_bodies.inspection_body.steps.step4',
-                            compact('declaration', 'isLocked'))
+                            [
+                                'declaration' => $declaration,
+                                'isLocked' => $isLocked,
+                                'getSection' => $getSection,
+                                'getLabel' => $getLabel,
+                                'getColumns' => $getColumns,
+                            ])
                     @else
                         @php
                             $renderDetails([
-                                'Type A' => $declaration->type_a ?? false ? 'Yes' : 'No',
-                                'Type B' => $declaration->type_b ?? false ? 'Yes' : 'No',
-                                'Type C' => $declaration->type_c ?? false ? 'Yes' : 'No',
-                                'ISO/IEC 17020 Compliance' => $declaration->iso17020_compliance ?? false ? 'Yes' : 'No',
-                                'Assessment Understanding' =>
+                                $getLabel('Inspection Body Type Declaration', 'type_a', 'Type A') => $declaration->type_a ?? false ? 'Yes' : 'No',
+                                $getLabel('Inspection Body Type Declaration', 'type_b', 'Type B') => $declaration->type_b ?? false ? 'Yes' : 'No',
+                                $getLabel('Inspection Body Type Declaration', 'type_c', 'Type C') => $declaration->type_c ?? false ? 'Yes' : 'No',
+                                $getLabel('Declarations', 'iso17020_compliance', 'ISO/IEC 17020 Compliance') => $declaration->iso17020_compliance ?? false ? 'Yes' : 'No',
+                                $getLabel('Declarations', 'assessment_understanding', 'Assessment Understanding') =>
                                     $declaration->assessment_understanding ?? false ? 'Yes' : 'No',
-                                'Agreement Acceptance' => $declaration->agreement_acceptance ?? false ? 'Yes' : 'No',
-                                'Quality Manual Attached' =>
+                                $getLabel('Declarations', 'agreement_acceptance', 'Agreement Acceptance') => $declaration->agreement_acceptance ?? false ? 'Yes' : 'No',
+                                $getLabel('Declarations', 'quality_manual_attached', 'Quality Manual Attached') =>
                                     $declaration->quality_manual_attached ?? false ? 'Yes' : 'No',
-                                'Document Review Attached' =>
+                                $getLabel('Declarations', 'document_review_attached', 'Document Review Attached') =>
                                     $declaration->document_review_attached ?? false ? 'Yes' : 'No',
-                                'Applicant Fee' => $declaration->applicant_fee ?? '',
-                                'Declaration Name' => $declaration->declaration_name ?? '',
-                                'Declaration Date' => $declaration->declaration_date ?? '',
+                                $getLabel('Applicant Fee & Signature', 'applicant_fee', 'Applicant Fee') => $declaration->applicant_fee ?? '',
+                                $getLabel('Applicant Fee & Signature', 'declaration_name', 'Declaration Name') => $declaration->declaration_name ?? '',
+                                $getLabel('Applicant Fee & Signature', 'declaration_date', 'Declaration Date') => $declaration->declaration_date ?? '',
                             ]);
                         @endphp
                         <div class="d-flex justify-content-end mt-3">

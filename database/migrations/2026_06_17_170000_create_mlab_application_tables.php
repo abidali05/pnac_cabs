@@ -21,6 +21,8 @@ return new class extends Migration
             $table->enum('status', ['draft', 'submitted'])->default('draft');
             $table->foreignId('created_by')->constrained('users');
             $table->timestamp('submitted_at')->nullable();
+            $table->string('application_type')->nullable();
+
             $table->timestamps();
         });
 

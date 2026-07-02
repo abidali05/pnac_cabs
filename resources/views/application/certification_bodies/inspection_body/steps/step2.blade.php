@@ -4,53 +4,53 @@
 
     {{-- Chief Executive --}}
     @include('application.certification_bodies.inspection_body._repeatable_table', [
-        'title'    => 'Chief Executive',
+        'title'    => $ceTitle,
         'target'   => 'ibChiefRows',
         'name'     => 'chief_executive',
-        'rows'     => $firstRow($staffRoles->get('Chief Executive', collect()), array_fill_keys(array_keys($staffCols), '')),
-        'columns'  => $staffCols,
+        'rows'     => $firstRow($staffRoles->get('Chief Executive', collect()), array_fill_keys(array_keys($ceCols), '')),
+        'columns'  => $ceCols,
         'isLocked' => $isLocked,
         'allowAdd' => false,
     ])
 
     {{-- Quality Management Representative --}}
     @include('application.certification_bodies.inspection_body._repeatable_table', [
-        'title'    => 'Quality Management Representative',
+        'title'    => $qmrTitle,
         'target'   => 'ibQualityRows',
         'name'     => 'quality_representative',
-        'rows'     => $firstRow($staffRoles->get('Quality Management Representative', collect()), array_fill_keys(array_keys($staffCols), '')),
-        'columns'  => $staffCols,
+        'rows'     => $firstRow($staffRoles->get('Quality Management Representative', collect()), array_fill_keys(array_keys($qmrCols), '')),
+        'columns'  => $qmrCols,
         'isLocked' => $isLocked,
         'allowAdd' => false,
     ])
 
     {{-- Management Members --}}
     @include('application.certification_bodies.inspection_body._repeatable_table', [
-        'title'    => 'Management Members',
+        'title'    => $mgmtTitle,
         'target'   => 'ibMgmtRows',
         'name'     => 'management_members',
-        'rows'     => $firstRow($mgmtMembers, array_fill_keys(array_keys($staffCols), '')),
-        'columns'  => $staffCols,
+        'rows'     => $firstRow($mgmtMembers, array_fill_keys(array_keys($mgmtCols), '')),
+        'columns'  => $mgmtCols,
         'isLocked' => $isLocked,
     ])
 
     {{-- Permanent Inspectors --}}
     @include('application.certification_bodies.inspection_body._repeatable_table', [
-        'title'    => 'Permanent Inspectors',
+        'title'    => $permTitle,
         'target'   => 'ibPermInspRows',
         'name'     => 'permanent_inspectors',
-        'rows'     => $firstRow($inspectors, array_fill_keys(array_keys($inspCols), '')),
-        'columns'  => $inspCols,
+        'rows'     => $firstRow($inspectors, array_fill_keys(array_keys($permCols), '')),
+        'columns'  => $permCols,
         'isLocked' => $isLocked,
     ])
 
     {{-- Freelance Inspectors --}}
     @include('application.certification_bodies.inspection_body._repeatable_table', [
-        'title'    => 'Freelance / Subcontracted Inspectors',
+        'title'    => $freelanceTitle,
         'target'   => 'ibFreelanceRows',
         'name'     => 'freelance_inspectors',
-        'rows'     => $firstRow($freelance, array_fill_keys(array_keys($inspCols), '')),
-        'columns'  => $inspCols,
+        'rows'     => $firstRow($freelance, array_fill_keys(array_keys($freelanceCols), '')),
+        'columns'  => $freelanceCols,
         'isLocked' => $isLocked,
     ])
 

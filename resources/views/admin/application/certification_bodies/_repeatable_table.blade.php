@@ -1,18 +1,24 @@
+@php
+    $allowMultiple = $allowMultiple ?? false;
+@endphp
 <div class="mt-4">
     <div class="d-flex justify-content-between align-items-center mb-2">
         <h6 class="mb-0">{{ $title }}</h6>
-        @unless ($isLocked)
-            <button type="button" class="btn btn-outline-success btn-sm js-add-row" data-target="{{ $target }}">Add More</button>
-        @endunless
+        @if ($allowMultiple && !$isLocked)
+            <button type="button" class="btn btn-outline-success btn-sm js-add-row" data-target="{{ $target }}">Add
+                More</button>
+        @endif
     </div>
     <div class="table-responsive">
         <table class="table table-bordered align-middle">
             <thead>
                 <tr>
                     @foreach ($columns as $label)
-                        <th>{{ $label }}</th>
+                        <th>{{ $label }} <span class="text-danger">*</span></th>
                     @endforeach
-                    <th style="width:70px;">Action</th>
+                    @if ($allowMultiple)
+                        <th style="width:70px;">Action</th>
+                    @endif
                 </tr>
             </thead>
             <tbody id="{{ $target }}">
@@ -20,20 +26,23 @@
                     <tr>
                         @foreach ($columns as $field => $label)
                             @php
-                                $value = is_array($row) ? ($row[$field] ?? '') : ($row->{$field} ?? '');
+                                $value = is_array($row) ? $row[$field] ?? '' : $row->{$field} ?? '';
                                 $type = str_contains($field, 'date') ? 'date' : 'text';
                             @endphp
                             <td>
                                 <input type="{{ $type }}" class="form-control"
                                     name="{{ $name }}[{{ $index }}][{{ $field }}]"
-                                    value="{{ $value }}" {{ $isLocked ? 'readonly' : '' }}>
+                                    value="{{ $value }}" {{ $isLocked ? 'readonly' : '' }}
+                                    {{ isset($disableRequired) && $disableRequired ? '' : 'required' }}>
                             </td>
                         @endforeach
-                        <td>
-                            @unless ($isLocked)
-                                <button type="button" class="btn btn-sm btn-danger js-remove-row">Remove</button>
-                            @endunless
-                        </td>
+                        @if ($allowMultiple)
+                            <td>
+                                @unless ($isLocked)
+                                    <button type="button" class="btn btn-sm btn-danger js-remove-row">Remove</button>
+                                @endunless
+                            </td>
+                        @endif
                     </tr>
                 @endforeach
             </tbody>

@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Models\User;
-use App\Models\UserDetail;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,7 +25,7 @@ class AuthenticatedSessionController extends Controller
      * Handle an incoming authentication request.
      */
     public function store(LoginRequest $request): RedirectResponse
-    {   
+    {
         // dd($request->all());
         // $request->authenticate();
 
@@ -36,7 +34,7 @@ class AuthenticatedSessionController extends Controller
         // ->with('success', 'You are logged in successfully!');
         $user = DB::table('users')->where('email', $request->email)->first();
         // dd($user);
-        if (!$user) {
+        if (! $user) {
             return redirect('/')->with('error', 'Email not found');
         } else {
             if ($user->status == 1) {
@@ -55,7 +53,7 @@ class AuthenticatedSessionController extends Controller
                     empty($user->userDetail?->designation)
                 ) {
                     return redirect()->route('profile.edit');
-                }else{
+                } else {
 
                     return redirect()->route('dashboard');
                 }

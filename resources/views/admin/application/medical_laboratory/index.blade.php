@@ -258,6 +258,212 @@
         : collect([$fallback]);
     $value = fn($row, string $field) => is_array($row) ? $row[$field] ?? '' : $row->{$field} ?? '';
 
+    // Load existing form schema dynamically
+    $form = $form ?? \App\Models\ApplicationForm::where('application_name', $scheme_name)
+        ->orWhere('slug', \Str::slug($scheme_name))
+        ->first();
+    $schema = $form?->form_schema;
+
+    $getSection = function ($titleOrIndex) use ($schema) {
+        if (!$schema || !isset($schema['sections'])) {
+            return null;
+        }
+        if (is_int($titleOrIndex)) {
+            return $schema['sections'][$titleOrIndex] ?? null;
+        }
+        foreach ($schema['sections'] as $sec) {
+            if (strcasecmp($sec['title'] ?? '', $titleOrIndex) === 0) {
+                return $sec;
+            }
+        }
+        return null;
+    };
+
+    $fieldIndexMap = [
+        'About Yourselves' => [
+            'organisation_name' => 0,
+            'lab_address' => 1,
+            'title' => 2,
+            'contact_name' => 3,
+            'contact_designation' => 4,
+            'parent_organisation' => 5,
+            'parent_relationship' => 6,
+            'parent_address' => 7,
+            'parent_tel' => 8,
+            'parent_fax' => 9,
+            'invoice_organisation' => 10,
+            'invoice_address' => 11,
+            'invoice_postcode' => 12,
+            'invoice_tel' => 13,
+            'invoice_fax' => 14,
+            'ownership_type' => 15,
+            'registration_no' => 16,
+            'ownership_other_description' => 17,
+            'testing_main_activity' => 18,
+            'main_activity_description' => 19,
+            'consultant_name' => 20,
+            'consultant_organisation' => 21,
+            'consultant_address' => 22,
+            'consultant_postcode' => 23,
+            'consultant_tel' => 24,
+            'consultant_fax' => 25,
+            'consultant_email' => 26,
+            'facility_permanent' => 27,
+            'facility_sample_collection' => 28,
+            'facility_temporary' => 29,
+            'facility_mobile' => 30,
+            'sample_collection_list' => 31,
+            'fields_of_testing' => 32,
+            'other_field' => 33,
+        ],
+        'Technical Management' => [
+            'department' => 0,
+            'name_designation' => 1,
+            'qualification' => 2,
+            'experience' => 3,
+            'training' => 4,
+            'authorized_area' => 5,
+            'signature' => 6,
+        ],
+        'Quality Manager' => [
+            'name' => 0,
+            'qualification' => 1,
+            'experience' => 2,
+            'training' => 3,
+            'signature' => 4,
+        ],
+        'Laboratory Staff' => [
+            'section_name' => 0,
+            'section_leader' => 1,
+            'qualification' => 2,
+            'experience' => 3,
+            'training' => 4,
+            'authorized_area' => 5,
+        ],
+        'Test Scope' => [
+            'sample_type' => 0,
+            'test_type' => 1,
+            'range' => 2,
+            'detection_limit' => 3,
+            'uncertainty' => 4,
+            'standard_method' => 5,
+            'equipment_used' => 6,
+            'qc_measures' => 7,
+        ],
+        'Equipment' => [
+            'equipment_name' => 0,
+            'model' => 1,
+            'capacity' => 2,
+            'detection_limit' => 3,
+            'calibration_date' => 4,
+            'next_calibration' => 5,
+            'usage' => 6,
+        ],
+        'Reference Materials' => [
+            'name' => 0,
+            'supplier' => 1,
+            'expiry' => 2,
+            'traceability' => 3,
+            'purpose' => 4,
+        ],
+        'Proficiency Testing' => [
+            'sample_type' => 0,
+            'test' => 1,
+            'date' => 2,
+            'organizing_body' => 3,
+            'z_score' => 4,
+            'corrective_action' => 5,
+        ],
+        'About Your Quality System' => [
+            'calibration_program_exists' => 0,
+            'calibration_program_comment' => 1,
+            'record_maintained' => 2,
+            'record_maintained_comment' => 3,
+            'facilities_adequate' => 4,
+            'facilities_adequate_comment' => 5,
+            'internal_procedure_exists' => 6,
+            'internal_procedure_comment' => 7,
+            'traceability_pnac' => 8,
+            'traceability_pnac_comment' => 9,
+            'traceability_other' => 10,
+            'in_house_calibration' => 11,
+            'in_house_uncertainty_identified' => 12,
+            'in_house_uncertainty_incorporated' => 13,
+            'complies' => 14,
+        ],
+        'Area of non-compliance' => [
+            'area' => 0,
+            'rectification_date' => 1,
+        ],
+        'Other Approvals' => [
+            'body_name' => 0,
+            'scope' => 1,
+            'certificate_no' => 2,
+            'start_date' => 3,
+            'expiry_date' => 4,
+        ],
+        'Declaration' => [
+            'application_types' => 0,
+            'other_type' => 1,
+            'agreement_accepted' => 2,
+            'fee' => 3,
+            'signed_by' => 4,
+            'signed_date' => 5,
+        ],
+    ];
+
+    $getLabel = function ($sectionTitleOrIndex, $fieldIndexOrName, $fallback = '') use ($getSection, $fieldIndexMap) {
+        $sec = $getSection($sectionTitleOrIndex);
+        if (!$sec || !isset($sec['fields'])) {
+            return $fallback;
+        }
+        if (is_int($fieldIndexOrName)) {
+            return $sec['fields'][$fieldIndexOrName]['label'] ?? $fallback;
+        }
+
+        $secTitle = $sec['title'] ?? '';
+        if (isset($fieldIndexMap[$secTitle][$fieldIndexOrName])) {
+            $idx = $fieldIndexMap[$secTitle][$fieldIndexOrName];
+            if (isset($sec['fields'][$idx]['label'])) {
+                return $sec['fields'][$idx]['label'];
+            }
+        }
+
+        foreach ($sec['fields'] as $fld) {
+            if (strcasecmp($fld['name'] ?? '', $fieldIndexOrName) === 0) {
+                return $fld['label'] ?? $fallback;
+            }
+        }
+        return $fallback;
+    };
+
+    $getColumns = function ($sectionTitleOrIndex, $fallbackColumns) use ($getSection, $fieldIndexMap) {
+        $sec = $getSection($sectionTitleOrIndex);
+        if (!$sec || !isset($sec['fields'])) {
+            return $fallbackColumns;
+        }
+        $cols = [];
+        $secTitle = $sec['title'] ?? '';
+        foreach ($fallbackColumns as $field => $fallbackLabel) {
+            $label = $fallbackLabel;
+            if (isset($fieldIndexMap[$secTitle][$field])) {
+                $idx = $fieldIndexMap[$secTitle][$field];
+                if (isset($sec['fields'][$idx]['label'])) {
+                    $cols[$field] = $sec['fields'][$idx]['label'];
+                    continue;
+                }
+            }
+            foreach ($sec['fields'] as $fld) {
+                if (strcasecmp($fld['name'] ?? '', $field) === 0) {
+                    $label = $fld['label'] ?? $fallbackLabel;
+                    break;
+                }
+            }
+            $cols[$field] = $label;
+        }
+        return $cols;
+    };
+
     $renderDetails = function (array $items) {
         echo '<div class="details-grid">';
         foreach ($items as $label => $itemValue) {
@@ -322,7 +528,7 @@
                     data-open="{{ $openSection === 'step1' ? '1' : '0' }}">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step 1: About Yourselves</h5>
+                            <h5 class="mb-1">Step 1: {{ $getSection('About Yourselves') ? $getSection('About Yourselves')['title'] : 'About Yourselves' }}</h5>
                             <p class="text-muted mb-0">Please type or use BLOCK LETTERS.</p>
                         </div>
                         <span class="badge {{ $isSaved('step1') ? 'bg-success' : 'bg-warning text-dark' }}">
@@ -336,13 +542,13 @@
                             <div class="row g-3">
                                 {{-- Organisation Name and Address (master table fields) --}}
                                 <div class="col-md-6">
-                                    <label class="form-label">Organisation Name <span class="text-danger">*</span></label>
+                                    <label class="form-label">{{ $getLabel('About Yourselves', 'organisation_name', 'Organisation Name') }} <span class="text-danger">*</span></label>
                                     <input class="form-control" name="organisation_name"
                                         value="{{ old('organisation_name', $mlabApplication->organisation_name ?? '') }}"
                                         required>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Medical Laboratory Address <span
+                                    <label class="form-label">{{ $getLabel('About Yourselves', 'lab_address', 'Medical Laboratory Address') }} <span
                                             class="text-danger">*</span></label>
                                     <textarea class="form-control" name="lab_address" rows="2" required>{{ old('lab_address', $mlabApplication->lab_address ?? '') }}</textarea>
                                 </div>
@@ -352,34 +558,34 @@
                                     <h6 class="fw-bold">1.1 Name and position (Director level) of person authorising this
                                         application</h6>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Title</label><input class="form-control"
-                                        name="title" value="{{ old('title', $step1->title ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">Name</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'title', 'Title') }} <span
+                                            class="text-danger">*</span></label><input class="form-control" name="title"
+                                        value="{{ old('title', $step1->title ?? '') }}" required></div>
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'contact_name', 'Name') }} <span
+                                            class="text-danger">*</span></label><input class="form-control"
                                         name="contact_name" value="{{ old('contact_name', $step1->contact_name ?? '') }}"
                                         required></div>
-                                <div class="col-md-4"><label class="form-label">Position</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'contact_designation', 'Position') }} <span
+                                            class="text-danger">*</span></label><input class="form-control"
                                         name="contact_designation"
-                                        value="{{ old('contact_designation', $step1->contact_designation ?? '') }}"></div>
+                                        value="{{ old('contact_designation', $step1->contact_designation ?? '') }}"
+                                        required></div>
 
-                                {{-- 1.2 Parent Organisation --}}
+                                {{-- 1.2 Parent Organisation (if any) — asterisk/required SKIP --}}
                                 <div class="col-12 mt-3">
                                     <h6 class="fw-bold">1.2 Name and address of the parent organisation (if any)</h6>
                                 </div>
-                                <div class="col-md-12"><label class="form-label">Parent Organisation</label><input
+                                <div class="col-md-12"><label class="form-label">{{ $getLabel('About Yourselves', 'parent_organisation', 'Parent Organisation') }}</label><input
                                         class="form-control" name="parent_organisation"
                                         value="{{ old('parent_organisation', $step1->parent_organisation ?? '') }}"></div>
-                                <div class="col-md-12"><label class="form-label">Relationship with Parent
-                                        organisation</label><input class="form-control" name="parent_relationship"
+                                <div class="col-md-12"><label class="form-label">{{ $getLabel('About Yourselves', 'parent_relationship', 'Relationship with Parent organisation') }}</label><input class="form-control" name="parent_relationship"
                                         value="{{ old('parent_relationship', $step1->parent_relationship ?? '') }}"></div>
-                                <div class="col-md-12"><label class="form-label">Address</label>
+                                <div class="col-md-12"><label class="form-label">{{ $getLabel('About Yourselves', 'parent_address', 'Address') }}</label>
                                     <textarea class="form-control" name="parent_address" rows="2">{{ old('parent_address', $step1->parent_address ?? '') }}</textarea>
                                 </div>
-                                {{-- <div class="col-md-4"><label class="form-label">Postcode</label><input class="form-control"
-                                        name="parent_postcode"
-                                        value="{{ old('parent_postcode', $step1->parent_postcode ?? '') }}"></div> --}}
-                                <div class="col-md-4"><label class="form-label">Tel</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'parent_tel', 'Tel') }}</label><input class="form-control"
                                         name="parent_tel" value="{{ old('parent_tel', $step1->parent_tel ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">Fax</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'parent_fax', 'Fax') }}</label><input class="form-control"
                                         name="parent_fax" value="{{ old('parent_fax', $step1->parent_fax ?? '') }}"></div>
 
                                 {{-- 1.3 Invoice Address --}}
@@ -387,26 +593,36 @@
                                     <h6 class="fw-bold">1.3 Address for invoicing (if different from the laboratory’s
                                         address)</h6>
                                 </div>
-                                <div class="col-md-12"><label class="form-label">Organisation</label><input
-                                        class="form-control" name="invoice_organisation"
-                                        value="{{ old('invoice_organisation', $step1->invoice_organisation ?? '') }}">
+                                <div class="col-md-12"><label class="form-label">{{ $getLabel('About Yourselves', 'invoice_organisation', 'Organisation') }} <span
+                                            class="text-danger">*</span></label><input class="form-control"
+                                        name="invoice_organisation"
+                                        value="{{ old('invoice_organisation', $step1->invoice_organisation ?? '') }}"
+                                        required>
                                 </div>
-                                <div class="col-md-12"><label class="form-label">Address</label>
-                                    <textarea class="form-control" name="invoice_address" rows="2">{{ old('invoice_address', $step1->invoice_address ?? '') }}</textarea>
+                                <div class="col-md-12"><label class="form-label">{{ $getLabel('About Yourselves', 'invoice_address', 'Address') }} <span
+                                            class="text-danger">*</span></label>
+                                    <textarea class="form-control" name="invoice_address" rows="2" required>{{ old('invoice_address', $step1->invoice_address ?? '') }}</textarea>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Postcode</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'invoice_postcode', 'Postcode') }} <span
+                                            class="text-danger">*</span></label><input class="form-control"
                                         name="invoice_postcode"
-                                        value="{{ old('invoice_postcode', $step1->invoice_postcode ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">Tel</label><input class="form-control"
-                                        name="invoice_tel" value="{{ old('invoice_tel', $step1->invoice_tel ?? '') }}">
+                                        value="{{ old('invoice_postcode', $step1->invoice_postcode ?? '') }}" required>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Fax</label><input class="form-control"
-                                        name="invoice_fax" value="{{ old('invoice_fax', $step1->invoice_fax ?? '') }}">
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'invoice_tel', 'Tel') }} <span
+                                            class="text-danger">*</span></label><input class="form-control"
+                                        name="invoice_tel" value="{{ old('invoice_tel', $step1->invoice_tel ?? '') }}"
+                                        required>
+                                </div>
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'invoice_fax', 'Fax') }} <span
+                                            class="text-danger">*</span></label><input class="form-control"
+                                        name="invoice_fax" value="{{ old('invoice_fax', $step1->invoice_fax ?? '') }}"
+                                        required>
                                 </div>
 
                                 {{-- 1.4 Ownership --}}
                                 <div class="col-12 mt-3">
-                                    <h6 class="fw-bold">1.4 Information about ownership: please tick the appropriate box.
+                                    <h6 class="fw-bold">{{ $getLabel('About Yourselves', 'ownership_type', '1.4 Information about ownership: please tick the appropriate box.') }}
+                                        <span class="text-danger">*</span>
                                     </h6>
                                 </div>
                                 <div class="col-md-12">
@@ -428,6 +644,7 @@
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="radio" name="ownership_type"
                                                         value="{{ $value }}" id="own_{{ $loop->index }}"
+                                                        @if ($loop->first) required @endif
                                                         @if ($selectedOwnership === $value) checked @endif>
                                                     <label class="form-check-label"
                                                         for="own_{{ $loop->index }}">{{ $label }}</label>
@@ -436,62 +653,64 @@
                                         @endforeach
                                     </div>
                                     <div class="mt-2">
-                                        <label class="form-label">Registration No. (if applicable)</label>
+                                        <label class="form-label">{{ $getLabel('About Yourselves', 'registration_no', 'Registration No. (if applicable)') }} <span
+                                                class="text-danger">*</span></label>
                                         <input class="form-control" name="registration_no"
-                                            value="{{ old('registration_no', $step1->registration_no ?? '') }}">
-                                        <label class="form-label">If Other, please describe</label>
-                                        <textarea class="form-control" name="ownership_other_description" rows="2">{{ old('ownership_other_description', $step1->ownership_other_description ?? '') }}</textarea>
+                                            value="{{ old('registration_no', $step1->registration_no ?? '') }}" required>
+                                        <label class="form-label">{{ $getLabel('About Yourselves', 'ownership_other_description', 'If Other, please describe') }} <span
+                                                class="text-danger">*</span></label>
+                                        <textarea class="form-control" name="ownership_other_description" rows="2" required>{{ old('ownership_other_description', $step1->ownership_other_description ?? '') }}</textarea>
                                     </div>
                                 </div>
 
                                 {{-- 1.5 Main activity of parent company --}}
                                 <div class="col-12 mt-3">
-                                    <h6 class="fw-bold">1.5 Is testing the main activity of the parent company?</h6>
+                                    <h6 class="fw-bold">{{ $getLabel('About Yourselves', 'testing_main_activity', '1.5 Is testing the main activity of the parent company?') }} <span
+                                            class="text-danger">*</span></h6>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="radio" name="testing_main_activity"
-                                            value="yes" id="tma_yes"
+                                            value="yes" id="tma_yes" required
                                             @if (old('testing_main_activity', $step1->testing_main_activity ?? '') === 'yes') checked @endif>
                                         <label class="form-check-label" for="tma_yes">Yes</label>
                                     </div>
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="radio" name="testing_main_activity"
-                                            value="no" id="tma_no"
+                                            value="no" id="tma_no" required
                                             @if (old('testing_main_activity', $step1->testing_main_activity ?? '') === 'no') checked @endif>
                                         <label class="form-check-label" for="tma_no">No</label>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">If No, describe the main activities of the parent
-                                        company</label>
-                                    <textarea class="form-control" name="main_activity_description" rows="2">{{ old('main_activity_description', $step1->main_activity_description ?? '') }}</textarea>
+                                    <label class="form-label">{{ $getLabel('About Yourselves', 'main_activity_description', 'If No, describe the main activities of the parent company') }} <span class="text-danger">*</span></label>
+                                    <textarea class="form-control" name="main_activity_description" rows="2" required>{{ old('main_activity_description', $step1->main_activity_description ?? '') }}</textarea>
                                 </div>
 
-                                {{-- 1.6 Consultant --}}
+                                {{-- 1.6 Consultant (if any) — asterisk/required SKIP --}}
                                 <div class="col-12 mt-3">
                                     <h6 class="fw-bold">1.6 Name of Consultant / Consultancy Firm (if any)</h6>
                                 </div>
-                                <div class="col-md-6"><label class="form-label">Name</label><input class="form-control"
+                                <div class="col-md-6"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_name', 'Name') }}</label><input class="form-control"
                                         name="consultant_name"
                                         value="{{ old('consultant_name', $step1->consultant_name ?? '') }}"></div>
-                                <div class="col-md-6"><label class="form-label">Organisation</label><input
+                                <div class="col-md-6"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_organisation', 'Organisation') }}</label><input
                                         class="form-control" name="consultant_organisation"
                                         value="{{ old('consultant_organisation', $step1->consultant_organisation ?? '') }}">
                                 </div>
-                                <div class="col-md-12"><label class="form-label">Address</label>
+                                <div class="col-md-12"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_address', 'Address') }}</label>
                                     <textarea class="form-control" name="consultant_address" rows="2">{{ old('consultant_address', $step1->consultant_address ?? '') }}</textarea>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Postcode</label><input
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_postcode', 'Postcode') }}</label><input
                                         class="form-control" name="consultant_postcode"
                                         value="{{ old('consultant_postcode', $step1->consultant_postcode ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">Tel</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_tel', 'Tel') }}</label><input class="form-control"
                                         name="consultant_tel"
                                         value="{{ old('consultant_tel', $step1->consultant_tel ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">Fax</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_fax', 'Fax') }}</label><input class="form-control"
                                         name="consultant_fax"
                                         value="{{ old('consultant_fax', $step1->consultant_fax ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">E-Mail</label><input type="email"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('About Yourselves', 'consultant_email', 'E-Mail') }}</label><input type="email"
                                         class="form-control" name="consultant_email"
                                         value="{{ old('consultant_email', $step1->consultant_email ?? '') }}"></div>
 
@@ -516,19 +735,18 @@
                                                 value="yes" id="{{ $field }}"
                                                 @if (old($field, $step1->{$field} ?? '') === 'yes') checked @endif>
                                             <label class="form-check-label"
-                                                for="{{ $field }}">{{ $label }}</label>
+                                                for="{{ $field }}">{{ $getLabel('About Yourselves', $field, $label) }}</label>
                                         </div>
                                     </div>
                                 @endforeach
                                 <div class="col-md-12">
-                                    <label class="form-label">If Sample Collection Centre is Yes, attach list of sample
-                                        collection centres (upload later)</label>
-                                    <input type="file" name="sample_collection_list" class="form-control">
+                                    <label class="form-label">{{ $getLabel('About Yourselves', 'sample_collection_list', 'If Sample Collection Centre is Yes, attach list of sample collection centres (upload later)') }} <span class="text-danger">*</span></label>
+                                    <input type="file" name="sample_collection_list" class="form-control" required>
                                 </div>
 
                                 {{-- Fields of Testing --}}
                                 <div class="col-12 mt-3">
-                                    <label class="form-label">Fields of Testing</label>
+                                    <label class="form-label">{{ $getLabel('About Yourselves', 'fields_of_testing', 'Fields of Testing') }} <span class="text-danger">*</span></label>
                                     <div class="row">
                                         @php $fields = ['Clinical Chemistry', 'Haematology', 'Histopathology', 'Immunology', 'Microbiology', 'Molecular Biology']; @endphp
                                         @foreach ($fields as $field)
@@ -567,47 +785,47 @@
                             $renderDetails(
                                 array_merge(
                                     [
-                                        'Organisation Name' => $mlabApplication->organisation_name ?? '-',
-                                        'Laboratory Address' => $mlabApplication->lab_address ?? '-',
+                                        $getLabel('About Yourselves', 'organisation_name', 'Organisation Name') => $mlabApplication->organisation_name ?? '-',
+                                        $getLabel('About Yourselves', 'lab_address', 'Laboratory Address') => $mlabApplication->lab_address ?? '-',
                                     ],
                                     [
-                                        'Title' => $step1->title ?? '-',
-                                        'Name' => $step1->contact_name ?? '-',
-                                        'Position' => $step1->contact_designation ?? '-',
-                                        'Parent Organisation' => $step1->parent_organisation ?? '-',
-                                        'Relationship' => $step1->parent_relationship ?? '-',
-                                        'Parent Address' => $step1->parent_address ?? '-',
-                                        'Parent Postcode' => $step1->parent_postcode ?? '-',
-                                        'Parent Tel' => $step1->parent_tel ?? '-',
-                                        'Parent Fax' => $step1->parent_fax ?? '-',
-                                        'Invoice Organisation' => $step1->invoice_organisation ?? '-',
-                                        'Invoice Address' => $step1->invoice_address ?? '-',
-                                        'Invoice Postcode' => $step1->invoice_postcode ?? '-',
-                                        'Invoice Tel' => $step1->invoice_tel ?? '-',
-                                        'Invoice Fax' => $step1->invoice_fax ?? '-',
-                                        'Ownership' => $step1->ownership_type ?? '-',
-                                        'Registration No.' => $step1->registration_no ?? '-',
-                                        'Other Ownership Description' => $step1->ownership_other_description ?? '-',
-                                        'Testing Main Activity?' => ucfirst($step1->testing_main_activity ?? '-'),
-                                        'Main Activity Description' => $step1->main_activity_description ?? '-',
-                                        'Consultant Name' => $step1->consultant_name ?? '-',
-                                        'Consultant Organisation' => $step1->consultant_organisation ?? '-',
-                                        'Consultant Address' => $step1->consultant_address ?? '-',
-                                        'Consultant Postcode' => $step1->consultant_postcode ?? '-',
-                                        'Consultant Tel' => $step1->consultant_tel ?? '-',
-                                        'Consultant Fax' => $step1->consultant_fax ?? '-',
-                                        'Consultant Email' => $step1->consultant_email ?? '-',
-                                        'Permanent Facility' =>
+                                        $getLabel('About Yourselves', 'title', 'Title') => $step1->title ?? '-',
+                                        $getLabel('About Yourselves', 'contact_name', 'Name') => $step1->contact_name ?? '-',
+                                        $getLabel('About Yourselves', 'contact_designation', 'Position') => $step1->contact_designation ?? '-',
+                                        $getLabel('About Yourselves', 'parent_organisation', 'Parent Organisation') => $step1->parent_organisation ?? '-',
+                                        $getLabel('About Yourselves', 'parent_relationship', 'Relationship') => $step1->parent_relationship ?? '-',
+                                        $getLabel('About Yourselves', 'parent_address', 'Parent Address') => $step1->parent_address ?? '-',
+                                        $getLabel('About Yourselves', 'parent_postcode', 'Parent Postcode') => $step1->parent_postcode ?? '-',
+                                        $getLabel('About Yourselves', 'parent_tel', 'Parent Tel') => $step1->parent_tel ?? '-',
+                                        $getLabel('About Yourselves', 'parent_fax', 'Parent Fax') => $step1->parent_fax ?? '-',
+                                        $getLabel('About Yourselves', 'invoice_organisation', 'Invoice Organisation') => $step1->invoice_organisation ?? '-',
+                                        $getLabel('About Yourselves', 'invoice_address', 'Invoice Address') => $step1->invoice_address ?? '-',
+                                        $getLabel('About Yourselves', 'invoice_postcode', 'Invoice Postcode') => $step1->invoice_postcode ?? '-',
+                                        $getLabel('About Yourselves', 'invoice_tel', 'Invoice Tel') => $step1->invoice_tel ?? '-',
+                                        $getLabel('About Yourselves', 'invoice_fax', 'Invoice Fax') => $step1->invoice_fax ?? '-',
+                                        $getLabel('About Yourselves', 'ownership_type', 'Ownership') => $step1->ownership_type ?? '-',
+                                        $getLabel('About Yourselves', 'registration_no', 'Registration No.') => $step1->registration_no ?? '-',
+                                        $getLabel('About Yourselves', 'ownership_other_description', 'Other Ownership Description') => $step1->ownership_other_description ?? '-',
+                                        $getLabel('About Yourselves', 'testing_main_activity', 'Testing Main Activity?') => ucfirst($step1->testing_main_activity ?? '-'),
+                                        $getLabel('About Yourselves', 'main_activity_description', 'Main Activity Description') => $step1->main_activity_description ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_name', 'Consultant Name') => $step1->consultant_name ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_organisation', 'Consultant Organisation') => $step1->consultant_organisation ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_address', 'Consultant Address') => $step1->consultant_address ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_postcode', 'Consultant Postcode') => $step1->consultant_postcode ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_tel', 'Consultant Tel') => $step1->consultant_tel ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_fax', 'Consultant Fax') => $step1->consultant_fax ?? '-',
+                                        $getLabel('About Yourselves', 'consultant_email', 'Consultant Email') => $step1->consultant_email ?? '-',
+                                        $getLabel('About Yourselves', 'facility_permanent', 'Permanent Facility') =>
                                             ($step1->facility_permanent ?? '') === 'yes' ? 'Yes' : 'No',
-                                        'Sample Collection Centre' =>
+                                        $getLabel('About Yourselves', 'facility_sample_collection', 'Sample Collection Centre') =>
                                             ($step1->facility_sample_collection ?? '') === 'yes' ? 'Yes' : 'No',
-                                        'Temporary Facility' =>
+                                        $getLabel('About Yourselves', 'facility_temporary', 'Temporary Facility') =>
                                             ($step1->facility_temporary ?? '') === 'yes' ? 'Yes' : 'No',
-                                        'Mobile Laboratory' => ($step1->facility_mobile ?? '') === 'yes' ? 'Yes' : 'No',
-                                        'Fields of Testing' => is_array($step1->fields_of_testing ?? [])
+                                        $getLabel('About Yourselves', 'facility_mobile', 'Mobile Laboratory') => ($step1->facility_mobile ?? '') === 'yes' ? 'Yes' : 'No',
+                                        $getLabel('About Yourselves', 'fields_of_testing', 'Fields of Testing') => is_array($step1->fields_of_testing ?? [])
                                             ? implode(', ', $step1->fields_of_testing)
                                             : '-',
-                                        'Other Testing Field' => $step1->other_field ?? '-',
+                                        $getLabel('About Yourselves', 'other_field', 'Other Testing Field') => $step1->other_field ?? '-',
                                     ],
                                 ),
                             );
@@ -615,20 +833,43 @@
                         <div class="d-flex justify-content-end mt-3"><a href="{{ $editUrl('step1') }}"
                                 class="btn btn-outline-success btn-sm">Edit</a></div>
                     @endif
-                </div>
-                {{-- ========================================================== --}}
-                {{-- STEP 2: Staff Information                                   --}}
-                {{-- ========================================================== --}}
                 @php
                     $technicalManagement = $mlabData['technical_management'] ?? collect();
                     $qualityManager = $mlabData['quality_manager'] ?? null;
                     $labStaff = $mlabData['lab_staff'] ?? collect();
+                    $techMgmtTitle = $getSection('Technical Management') ? $getSection('Technical Management')['title'] : 'Technical Management';
+                    $techMgmtCols = $getColumns('Technical Management', [
+                        'department' => 'Department',
+                        'name_designation' => 'Name & Designation',
+                        'qualification' => 'Qualification',
+                        'experience' => 'Experience',
+                        'training' => 'Training',
+                        'authorized_area' => 'Authorized Area',
+                        'signature' => 'Signature',
+                    ]);
+                    $qmTitle = $getSection('Quality Manager') ? $getSection('Quality Manager')['title'] : 'Quality Manager';
+                    $qmCols = $getColumns('Quality Manager', [
+                        'name' => 'Name',
+                        'qualification' => 'Qualification',
+                        'experience' => 'Experience',
+                        'training' => 'Training',
+                        'signature' => 'Signature',
+                    ]);
+                    $labStaffTitle = $getSection('Laboratory Staff') ? $getSection('Laboratory Staff')['title'] : 'Laboratory Staff';
+                    $labStaffCols = $getColumns('Laboratory Staff', [
+                        'section_name' => 'Section Name',
+                        'section_leader' => 'Section Leader',
+                        'qualification' => 'Qualification',
+                        'experience' => 'Experience',
+                        'training' => 'Training',
+                        'authorized_area' => 'Authorized Area',
+                    ]);
                 @endphp
                 <div class="border rounded p-3 p-md-4 mb-3 bg-white pnac-step-card" data-section="step2"
                     data-open="{{ $openSection === 'step2' ? '1' : '0' }}">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step 2: Staff Information</h5>
+                            <h5 class="mb-1">Step 2: {{ $getSection('Staff Information') ? $getSection('Staff Information')['title'] : 'Staff Information' }}</h5>
                             <p class="text-muted mb-0">Technical management, quality manager, and lab staff.</p>
                         </div>
                         <span
@@ -638,87 +879,43 @@
                         <form method="POST" action="{{ $sectionUrl('step2') }}" class="js-card-form mlab-js-card-form">
                             @csrf
                             @include('admin.application.medical_laboratory._repeatable_table', [
-                                'title' => 'Technical Management',
+                                'title' => $techMgmtTitle,
                                 'target' => 'mlabTechMgmtRows',
                                 'name' => 'technical_management',
-                                'rows' => $firstRow($technicalManagement, [
-                                    'department' => '',
-                                    'name_designation' => '',
-                                    'qualification' => '',
-                                    'experience' => '',
-                                    'training' => '',
-                                    'authorized_area' => '',
-                                    'signature' => '',
-                                ]),
-                                'columns' => [
-                                    'department' => 'Department',
-                                    'name_designation' => 'Name & Designation',
-                                    'qualification' => 'Qualification',
-                                    'experience' => 'Experience',
-                                    'training' => 'Training',
-                                    'authorized_area' => 'Authorized Area',
-                                    'signature' => 'Signature',
-                                ],
+                                'rows' => $firstRow($technicalManagement, array_fill_keys(array_keys($techMgmtCols), '')),
+                                'columns' => $techMgmtCols,
                                 'isLocked' => $isLocked,
                             ])
                             @php
                                 $qm = $qualityManager
                                     ? collect([$qualityManager])
-                                    : collect([
-                                        [
-                                            'name' => '',
-                                            'qualification' => '',
-                                            'experience' => '',
-                                            'training' => '',
-                                            'signature' => '',
-                                        ],
-                                    ]);
+                                    : collect([array_fill_keys(array_keys($qmCols), '')]);
                             @endphp
 
                             @include('admin.application.medical_laboratory._repeatable_table', [
-                                'title' => 'Quality Manager',
+                                'title' => $qmTitle,
                                 'target' => 'mlabQualityManagerRows',
                                 'name' => 'quality_manager',
                                 'rows' => $qm,
-                                'columns' => [
-                                    'name' => 'Name',
-                                    'qualification' => 'Qualification',
-                                    'experience' => 'Experience',
-                                    'training' => 'Training',
-                                    'signature' => 'Signature',
-                                ],
+                                'columns' => $qmCols,
                                 'isLocked' => $isLocked,
                                 'allowAdd' => false,
                             ])
                             @include('admin.application.medical_laboratory._repeatable_table', [
-                                'title' => 'Laboratory Staff',
+                                'title' => $labStaffTitle,
                                 'target' => 'mlabLabStaffRows',
                                 'name' => 'lab_staff',
-                                'rows' => $firstRow($labStaff, [
-                                    'section_name' => '',
-                                    'section_leader' => '',
-                                    'qualification' => '',
-                                    'experience' => '',
-                                    'training' => '',
-                                    'authorized_area' => '',
-                                ]),
-                                'columns' => [
-                                    'section_name' => 'Section Name',
-                                    'section_leader' => 'Section Leader',
-                                    'qualification' => 'Qualification',
-                                    'experience' => 'Experience',
-                                    'training' => 'Training',
-                                    'authorized_area' => 'Authorized Area',
-                                ],
+                                'rows' => $firstRow($labStaff, array_fill_keys(array_keys($labStaffCols), '')),
+                                'columns' => $labStaffCols,
                                 'isLocked' => $isLocked,
                             ])
                             <div class="d-flex justify-content-end mt-3"><button class="btn btn-success btn-sm">Save
-                                    Draft</button></div>
+                                     Draft</button></div>
                         </form>
                     @else
-                        <h6><strong>Technical Management</strong></h6>
-                        @php $renderTable($technicalManagement, ['department' => 'Department', 'name_designation' => 'Name & Designation', 'qualification' => 'Qualification', 'experience' => 'Experience', 'training' => 'Training', 'authorized_area' => 'Authorized Area', 'signature' => 'Signature']); @endphp
-                        <h6 class="mt-4"><strong>Quality Manager</strong></h6>
+                        <h6><strong>{{ $techMgmtTitle }}</strong></h6>
+                        @php $renderTable($technicalManagement, $techMgmtCols); @endphp
+                        <h6 class="mt-4"><strong>{{ $qmTitle }}</strong></h6>
                         @php
                             $qmCollection =
                                 $qualityManager instanceof \Illuminate\Support\Collection
@@ -727,9 +924,9 @@
                                         ? collect([$qualityManager])
                                         : collect());
                         @endphp
-                        @php $renderTable($qmCollection, ['name' => 'Name', 'qualification' => 'Qualification', 'experience' => 'Experience', 'training' => 'Training', 'signature' => 'Signature']); @endphp
-                        <h6 class="mt-4"><strong>Laboratory Staff</strong></h6>
-                        @php $renderTable($labStaff, ['section_name' => 'Section Name', 'section_leader' => 'Section Leader', 'qualification' => 'Qualification', 'experience' => 'Experience', 'training' => 'Training', 'authorized_area' => 'Authorized Area']); @endphp
+                        @php $renderTable($qmCollection, $qmCols); @endphp
+                        <h6 class="mt-4"><strong>{{ $labStaffTitle }}</strong></h6>
+                        @php $renderTable($labStaff, $labStaffCols); @endphp
                         <div class="d-flex justify-content-end mt-3"><a href="{{ $editUrl('step2') }}"
                                 class="btn btn-outline-success btn-sm">Edit</a></div>
                     @endif
@@ -743,12 +940,51 @@
                     $equipment = $mlabData['equipment'] ?? collect();
                     $referenceMaterials = $mlabData['reference_materials'] ?? collect();
                     $proficiencyTesting = $mlabData['proficiency_testing'] ?? collect();
+                    
+                    $testScopeTitle = $getSection('Test Scope') ? $getSection('Test Scope')['title'] : 'Test Scope';
+                    $testScopeCols = $getColumns('Test Scope', [
+                        'sample_type' => 'Sample Type / Matrix',
+                        'test_type' => 'Test Type',
+                        'range' => 'Range',
+                        'detection_limit' => 'Detection Limit',
+                        'uncertainty' => 'Uncertainty (MU)',
+                        'standard_method' => 'Standard Method',
+                        'equipment_used' => 'Equipment Used',
+                        'qc_measures' => 'QC Measures',
+                    ]);
+                    $equipmentTitle = $getSection('Equipment') ? $getSection('Equipment')['title'] : 'Equipment';
+                    $equipmentCols = $getColumns('Equipment', [
+                        'equipment_name' => 'Equipment Name',
+                        'model' => 'Model',
+                        'capacity' => 'Capacity',
+                        'detection_limit' => 'Detection Limit',
+                        'calibration_date' => 'Calibration Date',
+                        'next_calibration' => 'Next Calibration',
+                        'usage' => 'Usage',
+                    ]);
+                    $refMaterialsTitle = $getSection('Reference Materials') ? $getSection('Reference Materials')['title'] : 'Reference Materials';
+                    $refMaterialsCols = $getColumns('Reference Materials', [
+                        'name' => 'Name',
+                        'supplier' => 'Supplier',
+                        'expiry' => 'Expiry',
+                        'traceability' => 'Traceability',
+                        'purpose' => 'Purpose',
+                    ]);
+                    $ptTitle = $getSection('Proficiency Testing') ? $getSection('Proficiency Testing')['title'] : 'Proficiency Testing';
+                    $ptCols = $getColumns('Proficiency Testing', [
+                        'sample_type' => 'Sample Type',
+                        'test' => 'Test',
+                        'date' => 'Date',
+                        'organizing_body' => 'Organizing Body',
+                        'z_score' => 'Z-score',
+                        'corrective_action' => 'Corrective Action',
+                    ]);
                 @endphp
                 <div class="border rounded p-3 p-md-4 mb-3 bg-white pnac-step-card" data-section="step3"
                     data-open="{{ $openSection === 'step3' ? '1' : '0' }}">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step 3: Scope of Application</h5>
+                            <h5 class="mb-1">Step 3: {{ $getSection('Scope of Application') ? $getSection('Scope of Application')['title'] : 'Scope of Application' }}</h5>
                             <p class="text-muted mb-0">Tests, equipment, reference materials, and proficiency testing.</p>
                         </div>
                         <span
@@ -758,109 +994,49 @@
                         <form method="POST" action="{{ $sectionUrl('step3') }}" class="js-card-form mlab-js-card-form">
                             @csrf
                             @include('admin.application.medical_laboratory._repeatable_table', [
-                                'title' => 'Test Scope',
+                                'title' => $testScopeTitle,
                                 'target' => 'mlabScopeTestsRows',
                                 'name' => 'scope_tests',
-                                'rows' => $firstRow($scopeTests, [
-                                    'sample_type' => '',
-                                    'test_type' => '',
-                                    'range' => '',
-                                    'detection_limit' => '',
-                                    'uncertainty' => '',
-                                    'standard_method' => '',
-                                    'equipment_used' => '',
-                                    'qc_measures' => [],
-                                ]),
-                                'columns' => [
-                                    'sample_type' => 'Sample Type / Matrix',
-                                    'test_type' => 'Test Type',
-                                    'range' => 'Range',
-                                    'detection_limit' => 'Detection Limit',
-                                    'uncertainty' => 'Uncertainty (MU)',
-                                    'standard_method' => 'Standard Method',
-                                    'equipment_used' => 'Equipment Used',
-                                    'qc_measures' => 'QC Measures',
-                                ],
+                                'rows' => $firstRow($scopeTests, array_fill_keys(array_keys($testScopeCols), '')),
+                                'columns' => $testScopeCols,
                                 'isLocked' => $isLocked,
                             ])
                             @include('admin.application.medical_laboratory._repeatable_table', [
-                                'title' => 'Equipment',
+                                'title' => $equipmentTitle,
                                 'target' => 'mlabEquipmentRows',
                                 'name' => 'equipment',
-                                'rows' => $firstRow($equipment, [
-                                    'equipment_name' => '',
-                                    'model' => '',
-                                    'capacity' => '',
-                                    'detection_limit' => '',
-                                    'calibration_date' => '',
-                                    'next_calibration' => '',
-                                    'usage' => '',
-                                ]),
-                                'columns' => [
-                                    'equipment_name' => 'Equipment Name',
-                                    'model' => 'Model',
-                                    'capacity' => 'Capacity',
-                                    'detection_limit' => 'Detection Limit',
-                                    'calibration_date' => 'Calibration Date',
-                                    'next_calibration' => 'Next Calibration',
-                                    'usage' => 'Usage',
-                                ],
+                                'rows' => $firstRow($equipment, array_fill_keys(array_keys($equipmentCols), '')),
+                                'columns' => $equipmentCols,
                                 'isLocked' => $isLocked,
                             ])
                             @include('admin.application.medical_laboratory._repeatable_table', [
-                                'title' => 'Reference Materials',
+                                'title' => $refMaterialsTitle,
                                 'target' => 'mlabRefMaterialsRows',
                                 'name' => 'reference_materials',
-                                'rows' => $firstRow($referenceMaterials, [
-                                    'name' => '',
-                                    'supplier' => '',
-                                    'expiry' => '',
-                                    'traceability' => '',
-                                    'purpose' => '',
-                                ]),
-                                'columns' => [
-                                    'name' => 'Name',
-                                    'supplier' => 'Supplier',
-                                    'expiry' => 'Expiry',
-                                    'traceability' => 'Traceability',
-                                    'purpose' => 'Purpose',
-                                ],
+                                'rows' => $firstRow($referenceMaterials, array_fill_keys(array_keys($refMaterialsCols), '')),
+                                'columns' => $refMaterialsCols,
                                 'isLocked' => $isLocked,
                             ])
                             @include('admin.application.medical_laboratory._repeatable_table', [
-                                'title' => 'Proficiency Testing',
+                                'title' => $ptTitle,
                                 'target' => 'mlabPTRows',
                                 'name' => 'proficiency_testing',
-                                'rows' => $firstRow($proficiencyTesting, [
-                                    'sample_type' => '',
-                                    'test' => '',
-                                    'date' => '',
-                                    'organizing_body' => '',
-                                    'z_score' => '',
-                                    'corrective_action' => '',
-                                ]),
-                                'columns' => [
-                                    'sample_type' => 'Sample Type',
-                                    'test' => 'Test',
-                                    'date' => 'Date',
-                                    'organizing_body' => 'Organizing Body',
-                                    'z_score' => 'Z-score',
-                                    'corrective_action' => 'Corrective Action',
-                                ],
+                                'rows' => $firstRow($proficiencyTesting, array_fill_keys(array_keys($ptCols), '')),
+                                'columns' => $ptCols,
                                 'isLocked' => $isLocked,
                             ])
                             <div class="d-flex justify-content-end mt-3"><button class="btn btn-success btn-sm">Save
-                                    Draft</button></div>
+                                     Draft</button></div>
                         </form>
                     @else
-                        <h6><strong>Test Scope</strong></h6>
-                        @php $renderTable($scopeTests, ['sample_type' => 'Sample Type', 'test_type' => 'Test Type', 'range' => 'Range', 'detection_limit' => 'Detection Limit', 'uncertainty' => 'Uncertainty', 'standard_method' => 'Standard Method', 'equipment_used' => 'Equipment Used', 'qc_measures' => 'QC Measures']); @endphp
-                        <h6 class="mt-4"><strong>Equipment</strong></h6>
-                        @php $renderTable($equipment, ['equipment_name' => 'Equipment Name', 'model' => 'Model', 'capacity' => 'Capacity', 'detection_limit' => 'Detection Limit', 'calibration_date' => 'Calibration Date', 'next_calibration' => 'Next Calibration', 'usage' => 'Usage']); @endphp
-                        <h6 class="mt-4"><strong>Reference Materials</strong></h6>
-                        @php $renderTable($referenceMaterials, ['name' => 'Name', 'supplier' => 'Supplier', 'expiry' => 'Expiry', 'traceability' => 'Traceability', 'purpose' => 'Purpose']); @endphp
-                        <h6 class="mt-4"><strong>Proficiency Testing</strong></h6>
-                        @php $renderTable($proficiencyTesting, ['sample_type' => 'Sample Type', 'test' => 'Test', 'date' => 'Date', 'organizing_body' => 'Organizing Body', 'z_score' => 'Z-score', 'corrective_action' => 'Corrective Action']); @endphp
+                        <h6><strong>{{ $testScopeTitle }}</strong></h6>
+                        @php $renderTable($scopeTests, $testScopeCols); @endphp
+                        <h6 class="mt-4"><strong>{{ $equipmentTitle }}</strong></h6>
+                        @php $renderTable($equipment, $equipmentCols); @endphp
+                        <h6 class="mt-4"><strong>{{ $refMaterialsTitle }}</strong></h6>
+                        @php $renderTable($referenceMaterials, $refMaterialsCols); @endphp
+                        <h6 class="mt-4"><strong>{{ $ptTitle }}</strong></h6>
+                        @php $renderTable($proficiencyTesting, $ptCols); @endphp
                         <div class="d-flex justify-content-end mt-3"><a href="{{ $editUrl('step3') }}"
                                 class="btn btn-outline-success btn-sm">Edit</a></div>
                     @endif
@@ -881,11 +1057,25 @@
                         $nonComplianceRows = [];
                     }
                 @endphp
+                @php
+                    $calSystem = $mlabData['calibration_system'] ?? null;
+                    $isoCompliance = $mlabData['iso_compliance'] ?? null;
+                    $complies = $isoCompliance->complies ?? 'yes';
+                    $nonComplianceRows = $isoCompliance->non_compliance_areas ?? [];
+                    if (!is_array($nonComplianceRows)) {
+                        $nonComplianceRows = [];
+                    }
+                    $nonComplianceTitle = $getSection('Area of non-compliance') ? $getSection('Area of non-compliance')['title'] : 'Area of non-compliance';
+                    $nonComplianceCols = $getColumns('Area of non-compliance', [
+                        'area' => 'Area of non‑compliance',
+                        'rectification_date' => 'Rectified by (date)',
+                    ]);
+                @endphp
                 <div class="border rounded p-3 p-md-4 mb-3 bg-white pnac-step-card" data-section="step4"
                     data-open="{{ $openSection === 'step4' ? '1' : '0' }}">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step 4: About Your Quality System</h5>
+                            <h5 class="mb-1">Step 4: {{ $getSection('About Your Quality System') ? $getSection('About Your Quality System')['title'] : 'About Your Quality System' }}</h5>
                             <p class="text-muted mb-0">Please fill the PNAC form F-02/18.</p>
                         </div>
                         <span class="badge {{ $isSaved('step4') ? 'bg-success' : 'bg-warning text-dark' }}">
@@ -912,55 +1102,47 @@
                                                 [
                                                     'field' => 'calibration_program_exists',
                                                     'comment' => 'calibration_program_comment',
-                                                    'label' =>
-                                                        '1. Does a fully documented calibration program exist to ensure that the accuracy of equipment is adequate for the service operated by the laboratory?',
+                                                    'label' => $getLabel('About Your Quality System', 'calibration_program_exists', '1. Does a fully documented calibration program exist to ensure that the accuracy of equipment is adequate for the service operated by the laboratory?'),
                                                 ],
                                                 [
                                                     'field' => 'record_maintained',
                                                     'comment' => 'record_maintained_comment',
-                                                    'label' =>
-                                                        '2. Is a record maintained for test equipment, including calibration results?',
+                                                    'label' => $getLabel('About Your Quality System', 'record_maintained', '2. Is a record maintained for test equipment, including calibration results?'),
                                                 ],
                                                 [
                                                     'field' => 'facilities_adequate',
                                                     'comment' => 'facilities_adequate_comment',
-                                                    'label' =>
-                                                        '3. Are adequate facilities and environments provided for calibration, handling, control, storage and maintenance of all testing & measuring equipment?',
+                                                    'label' => $getLabel('About Your Quality System', 'facilities_adequate', '3. Are adequate facilities and environments provided for calibration, handling, control, storage and maintenance of all testing & measuring equipment?'),
                                                 ],
                                                 [
                                                     'field' => 'internal_procedure_exists',
                                                     'comment' => 'internal_procedure_comment',
-                                                    'label' =>
-                                                        '4. Are there documented procedures for internal calibration (if any) of all equipments and reference standards which cover the method of calibration and maximum intervals between calibrations?',
+                                                    'label' => $getLabel('About Your Quality System', 'internal_procedure_exists', '4. Are there documented procedures for internal calibration (if any) of all equipments and reference standards which cover the method of calibration and maximum intervals between calibrations?'),
                                                 ],
                                                 [
                                                     'field' => 'traceability_pnac',
                                                     'comment' => 'traceability_pnac_comment',
-                                                    'label' =>
-                                                        '5. Are the internal laboratory reference standards, and the calibration of key testing equipment traceable to national standard through:',
+                                                    'label' => $getLabel('About Your Quality System', 'traceability_pnac', '5. Are the internal laboratory reference standards, and the calibration of key testing equipment traceable to national standard through:'),
                                                 ],
                                                 [
                                                     'field' => null,
                                                     'comment' => 'traceability_other',
-                                                    'label' => '   - Other bodies (specify)?',
+                                                    'label' => $getLabel('About Your Quality System', 'traceability_other', '   - Other bodies (specify)?'),
                                                 ],
                                                 [
                                                     'field' => 'in_house_calibration',
                                                     'comment' => null,
-                                                    'label' =>
-                                                        '6. Do you perform in-house calibration of your instruments?',
+                                                    'label' => $getLabel('About Your Quality System', 'in_house_calibration', '6. Do you perform in-house calibration of your instruments?'),
                                                 ],
                                                 [
                                                     'field' => 'in_house_uncertainty_identified',
                                                     'comment' => null,
-                                                    'label' =>
-                                                        '   a. Have you identified source of uncertainty measurement?',
+                                                    'label' => $getLabel('About Your Quality System', 'in_house_uncertainty_identified', '   a. Have you identified source of uncertainty measurement?'),
                                                 ],
                                                 [
                                                     'field' => 'in_house_uncertainty_incorporated',
                                                     'comment' => null,
-                                                    'label' =>
-                                                        '   b. Do you incorporate uncertainty of measurement in your calibration?',
+                                                    'label' => $getLabel('About Your Quality System', 'in_house_uncertainty_incorporated', '   b. Do you incorporate uncertainty of measurement in your calibration?'),
                                                 ],
                                             ];
                                         @endphp
@@ -994,8 +1176,7 @@
                             <h6 class="fw-bold">B. Compliance with ISO 15189:2012 and PNAC Accreditation Requirements</h6>
                             <div class="row g-3">
                                 <div class="col-md-12">
-                                    <label class="fw-semibold">1. Do you consider that your laboratory complies with ISO
-                                        15189:2012 and PNAC accreditation requirements?</label>
+                                    <label class="fw-semibold">{{ $getLabel('About Your Quality System', 'complies', '1. Do you consider that your laboratory complies with ISO 15189:2012 and PNAC accreditation requirements?') }}</label>
                                     <div class="mt-1">
                                         <label class="form-check form-check-inline">
                                             <input class="form-check-input mlab-iso-toggle" type="radio"
@@ -1013,7 +1194,7 @@
 
                             <div class="mlab-non-compliance-wrap mt-3">
                                 @include('admin.application.medical_laboratory._repeatable_table', [
-                                    'title' => 'Area of non-compliance',
+                                    'title' => $nonComplianceTitle,
                                     'target' => 'mlabNonComplianceRows',
                                     'name' => 'iso_compliance[non_compliance_areas]',
                                     'rows' =>
@@ -1022,10 +1203,7 @@
                                                 ? collect($nonComplianceRows)
                                                 : collect([['area' => '', 'rectification_date' => '']]))
                                             : collect([['area' => '', 'rectification_date' => '']]),
-                                    'columns' => [
-                                        'area' => 'Area of non‑compliance',
-                                        'rectification_date' => 'Rectified by (date)',
-                                    ],
+                                    'columns' => $nonComplianceCols,
                                     'isLocked' => $isLocked,
                                 ])
                             </div>
@@ -1038,30 +1216,27 @@
                         {{-- View Mode --}}
                         @php
                             $renderDetails([
-                                'Calibration Program Exists' => ucfirst($calSystem->calibration_program_exists ?? '-'),
-                                'Comment' => $calSystem->calibration_program_comment ?? '-',
-                                'Record Maintained' => ucfirst($calSystem->record_maintained ?? '-'),
-                                'Comment' => $calSystem->record_maintained_comment ?? '-',
-                                'Facilities Adequate' => ucfirst($calSystem->facilities_adequate ?? '-'),
-                                'Comment' => $calSystem->facilities_adequate_comment ?? '-',
-                                'Internal Procedure Exists' => ucfirst($calSystem->internal_procedure_exists ?? '-'),
-                                'Comment' => $calSystem->internal_procedure_comment ?? '-',
-                                'Traceability PNAC' => ucfirst($calSystem->traceability_pnac ?? '-'),
-                                'Comment' => $calSystem->traceability_pnac_comment ?? '-',
-                                'Other Bodies' => $calSystem->traceability_other ?? '-',
-                                'In-house Calibration' => ucfirst($calSystem->in_house_calibration ?? '-'),
-                                'Uncertainty Identified' => ucfirst($calSystem->in_house_uncertainty_identified ?? '-'),
-                                'Uncertainty Incorporated' => ucfirst(
+                                $getLabel('About Your Quality System', 'calibration_program_exists', 'Calibration Program Exists') => ucfirst($calSystem->calibration_program_exists ?? '-'),
+                                $getLabel('About Your Quality System', 'calibration_program_comment', 'Comment') => $calSystem->calibration_program_comment ?? '-',
+                                $getLabel('About Your Quality System', 'record_maintained', 'Record Maintained') => ucfirst($calSystem->record_maintained ?? '-'),
+                                $getLabel('About Your Quality System', 'record_maintained_comment', 'Comment') => $calSystem->record_maintained_comment ?? '-',
+                                $getLabel('About Your Quality System', 'facilities_adequate', 'Facilities Adequate') => ucfirst($calSystem->facilities_adequate ?? '-'),
+                                $getLabel('About Your Quality System', 'facilities_adequate_comment', 'Comment') => $calSystem->facilities_adequate_comment ?? '-',
+                                $getLabel('About Your Quality System', 'internal_procedure_exists', 'Internal Procedure Exists') => ucfirst($calSystem->internal_procedure_exists ?? '-'),
+                                $getLabel('About Your Quality System', 'internal_procedure_comment', 'Comment') => $calSystem->internal_procedure_comment ?? '-',
+                                $getLabel('About Your Quality System', 'traceability_pnac', 'Traceability PNAC') => ucfirst($calSystem->traceability_pnac ?? '-'),
+                                $getLabel('About Your Quality System', 'traceability_pnac_comment', 'Comment') => $calSystem->traceability_pnac_comment ?? '-',
+                                $getLabel('About Your Quality System', 'traceability_other', 'Other Bodies') => $calSystem->traceability_other ?? '-',
+                                $getLabel('About Your Quality System', 'in_house_calibration', 'In-house Calibration') => ucfirst($calSystem->in_house_calibration ?? '-'),
+                                $getLabel('About Your Quality System', 'in_house_uncertainty_identified', 'Uncertainty Identified') => ucfirst($calSystem->in_house_uncertainty_identified ?? '-'),
+                                $getLabel('About Your Quality System', 'in_house_uncertainty_incorporated', 'Uncertainty Incorporated') => ucfirst(
                                     $calSystem->in_house_uncertainty_incorporated ?? '-',
                                 ),
-                                'ISO 15189 Compliance' => ucfirst($complies),
+                                $getLabel('About Your Quality System', 'complies', 'ISO 15189 Compliance') => ucfirst($complies),
                             ]);
                             if ($complies === 'no') {
-                                echo '<h6 class="mt-4"><strong>Non‑compliance Areas</strong></h6>';
-                                $renderTable(collect($nonComplianceRows), [
-                                    'area' => 'Area of non‑compliance',
-                                    'rectification_date' => 'Rectified by (date)',
-                                ]);
+                                echo '<h6 class="mt-4"><strong>' . e($nonComplianceTitle) . '</strong></h6>';
+                                $renderTable(collect($nonComplianceRows), $nonComplianceCols);
                             }
                         @endphp
                         <div class="d-flex justify-content-end mt-3"><a href="{{ $editUrl('step4') }}"
@@ -1069,15 +1244,24 @@
                     @endif
                 </div>
 
-                {{-- ========================================================== --}}
                 {{-- STEP 5: Other Approvals                                    --}}
                 {{-- ========================================================== --}}
-                @php $otherApprovals = $mlabData['other_approvals'] ?? collect(); @endphp
+                @php
+                    $otherApprovals = $mlabData['other_approvals'] ?? collect();
+                    $otherApprovalsTitle = $getSection('Other Approvals') ? $getSection('Other Approvals')['title'] : 'Other Approvals';
+                    $otherApprovalsCols = $getColumns('Other Approvals', [
+                        'body_name' => 'Approval Body Name',
+                        'scope' => 'Scope',
+                        'certificate_no' => 'Certificate No',
+                        'start_date' => 'Start Date',
+                        'expiry_date' => 'Expiry Date',
+                    ]);
+                @endphp
                 <div class="border rounded p-3 p-md-4 mb-3 bg-white pnac-step-card" data-section="step5"
                     data-open="{{ $openSection === 'step5' ? '1' : '0' }}">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step 5: Other Approvals</h5>
+                            <h5 class="mb-1">Step 5: {{ $otherApprovalsTitle }}</h5>
                             <p class="text-muted mb-0">Existing approvals and certificates.</p>
                         </div>
                         <span
@@ -1087,30 +1271,18 @@
                         <form method="POST" action="{{ $sectionUrl('step5') }}" class="js-card-form mlab-js-card-form">
                             @csrf
                             @include('admin.application.medical_laboratory._repeatable_table', [
-                                'title' => 'Other Approvals',
+                                'title' => $otherApprovalsTitle,
                                 'target' => 'mlabApprovalRows',
                                 'name' => 'other_approvals',
-                                'rows' => $firstRow($otherApprovals, [
-                                    'body_name' => '',
-                                    'scope' => '',
-                                    'certificate_no' => '',
-                                    'start_date' => '',
-                                    'expiry_date' => '',
-                                ]),
-                                'columns' => [
-                                    'body_name' => 'Approval Body Name',
-                                    'scope' => 'Scope',
-                                    'certificate_no' => 'Certificate No',
-                                    'start_date' => 'Start Date',
-                                    'expiry_date' => 'Expiry Date',
-                                ],
+                                'rows' => $firstRow($otherApprovals, array_fill_keys(array_keys($otherApprovalsCols), '')),
+                                'columns' => $otherApprovalsCols,
                                 'isLocked' => $isLocked,
                             ])
                             <div class="d-flex justify-content-end mt-3"><button class="btn btn-success btn-sm">Save
                                     Draft</button></div>
                         </form>
                     @else
-                        @php $renderTable($otherApprovals, ['body_name' => 'Approval Body Name', 'scope' => 'Scope', 'certificate_no' => 'Certificate No', 'start_date' => 'Start Date', 'expiry_date' => 'Expiry Date']); @endphp
+                        @php $renderTable($otherApprovals, $otherApprovalsCols); @endphp
                         <div class="d-flex justify-content-end mt-3"><a href="{{ $editUrl('step5') }}"
                                 class="btn btn-outline-success btn-sm">Edit</a></div>
                     @endif
@@ -1119,32 +1291,33 @@
                 {{-- ========================================================== --}}
                 {{-- STEP 6: Declaration                                        --}}
                 {{-- ========================================================== --}}
-                @php $declaration = $mlabData['declaration'] ?? null; @endphp
+
                 @php
-                    $declarationAppTypes = is_array($declaration->application_types ?? [])
-                        ? $declaration->application_types
-                        : [];
-                    $declarationAppTypes = json_decode($declaration->application_types ?? '[]', true);
-                    if (!is_array($declarationAppTypes)) {
-                        $declarationAppTypes = [];
+                    $declaration = $mlabData['declaration'] ?? null;
+                    // Safely get application types array
+                    $declarationAppTypes = [];
+                    if ($declaration && isset($declaration->application_types)) {
+                        $decoded = json_decode($declaration->application_types, true);
+                        $declarationAppTypes = is_array($decoded) ? $decoded : [];
                     }
                 @endphp
                 <div class="border rounded p-3 p-md-4 mb-3 bg-white pnac-step-card" data-section="step6"
                     data-open="{{ $openSection === 'step6' ? '1' : '0' }}">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step 6: Declaration</h5>
+                            <h5 class="mb-1">Step 6: {{ $getSection('Declaration') ? $getSection('Declaration')['title'] : 'Declaration' }}</h5>
                             <p class="text-muted mb-0">Application type, agreement, fee, and final submission.</p>
                         </div>
-                        <span
-                            class="badge {{ $isSaved('step6') ? 'bg-success' : 'bg-warning text-dark' }}">{{ $isSaved('step6') ? 'Saved' : 'Unsaved' }}</span>
+                        <span class="badge {{ $isSaved('step6') ? 'bg-success' : 'bg-warning text-dark' }}">
+                            {{ $isSaved('step6') ? 'Saved' : 'Unsaved' }}
+                        </span>
                     </div>
                     @if ($isEditing('step6'))
                         <form method="POST" action="{{ $sectionUrl('step6') }}" class="js-card-form mlab-js-card-form">
                             @csrf
                             <div class="row g-3">
                                 <div class="col-12">
-                                    <label class="form-label">Application Types</label>
+                                    <label class="form-label">{{ $getLabel('Declaration', 'application_types', 'Application Types') }}</label>
                                     @php $appTypes = ['Clinical Chemistry', 'Haematology', 'Histopathology', 'Immunology', 'Microbiology', 'Molecular Biology']; @endphp
                                     <div class="row">
                                         @foreach ($appTypes as $type)
@@ -1153,7 +1326,6 @@
                                                     <input class="form-check-input" type="checkbox"
                                                         name="application_types[]" value="{{ $type }}"
                                                         @if (in_array($type, old('application_types', $declarationAppTypes))) checked @endif>
-                                                    {{-- @if (is_array(old('application_types', $declaration->application_types ?? [])) && in_array($type, old('application_types', $declaration->application_types ?? []))) checked @endif> --}}
                                                     <label class="form-check-label">{{ $type }}</label>
                                                 </div>
                                             </div>
@@ -1174,20 +1346,23 @@
                                 <div class="col-md-12">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="agreement_accepted"
-                                            value="1" @checked($declaration->agreement_accepted ?? false) required>
-                                        <label class="form-check-label">I agree to the terms and conditions.</label>
+                                            value="1" @checked($declaration && $declaration->agreement_accepted ?? false) required>
+                                        <label class="form-check-label">{{ $getLabel('Declaration', 'agreement_accepted', 'I agree to the terms and conditions.') }}</label>
                                     </div>
                                 </div>
-                                <div class="col-md-4"><label class="form-label">Applicant Fee (PKR)</label><input
-                                        class="form-control" name="fee"
-                                        value="{{ old('fee', $declaration->fee ?? '') }}"></div>
-                                <div class="col-md-4"><label class="form-label">Signed By</label><input
-                                        class="form-control" name="signed_by"
-                                        value="{{ old('signed_by', $declaration->signed_by ?? '') }}" required></div>
-                                <div class="col-md-4"><label class="form-label">Signed Date</label><input type="date"
-                                        class="form-control" name="signed_date"
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('Declaration', 'fee', 'Applicant Fee (PKR)') }}</label>
+                                    <input class="form-control" name="fee"
+                                        value="{{ old('fee', $declaration->fee ?? '') }}">
+                                </div>
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('Declaration', 'signed_by', 'Signed By') }} <span class="text-danger">*</span></label>
+                                    <input class="form-control" name="signed_by"
+                                        value="{{ old('signed_by', $declaration->signed_by ?? '') }}" required>
+                                </div>
+                                <div class="col-md-4"><label class="form-label">{{ $getLabel('Declaration', 'signed_date', 'Signed Date') }} <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" name="signed_date"
                                         value="{{ old('signed_date', $declaration->signed_date ?? now()->format('Y-m-d')) }}"
-                                        required></div>
+                                        required>
+                                </div>
                             </div>
                             <div class="d-flex justify-content-end gap-2 mt-3">
                                 <button class="btn btn-success btn-sm">Save Draft</button>
@@ -1196,21 +1371,26 @@
                             </div>
                         </form>
                     @else
+                        {{-- View Mode --}}
                         @php
-                            $appTypesList = is_array($declaration->application_types ?? [])
-                                ? implode(', ', $declaration->application_types)
-                                : '-';
+                            // Safely get app types list
+                            $appTypesList = '-';
+                            if ($declaration && isset($declaration->application_types)) {
+                                $decoded = json_decode($declaration->application_types, true);
+                                $appTypesList = is_array($decoded) ? implode(', ', $decoded) : '-';
+                            }
                             $renderDetails([
-                                'Application Types' => $appTypesList,
-                                'Other Type' => $declaration->other_type ?? '-',
-                                'Agreement Accepted' => $declaration->agreement_accepted ?? false ? 'Yes' : 'No',
-                                'Applicant Fee' => $declaration->fee ?? '-',
-                                'Signed By' => $declaration->signed_by ?? '-',
-                                'Signed Date' => $declaration->signed_date ?? '-',
+                                $getLabel('Declaration', 'application_types', 'Application Types') => $appTypesList,
+                                $getLabel('Declaration', 'other_type', 'Other Type') => $declaration->other_type ?? '-',
+                                $getLabel('Declaration', 'agreement_accepted', 'Agreement Accepted') => $declaration && $declaration->agreement_accepted ? 'Yes' : 'No',
+                                $getLabel('Declaration', 'fee', 'Applicant Fee') => $declaration->fee ?? '-',
+                                $getLabel('Declaration', 'signed_by', 'Signed By') => $declaration->signed_by ?? '-',
+                                $getLabel('Declaration', 'signed_date', 'Signed Date') => $declaration->signed_date ?? '-',
                             ]);
                         @endphp
-                        <div class="d-flex justify-content-end mt-3"><a href="{{ $editUrl('step6') }}"
-                                class="btn btn-outline-success btn-sm">Edit</a></div>
+                        <div class="d-flex justify-content-end mt-3">
+                            <a href="{{ $editUrl('step6') }}" class="btn btn-outline-success btn-sm">Edit</a>
+                        </div>
                     @endif
                 </div>
             </div>
@@ -1455,7 +1635,4 @@
             });
         });
     </script>
-    {{-- <script src="{{ asset('admin/js/medical-laboratory.js') }}"></script> --}}
-
-    {{-- Medical Laboratory specific JS (Add/Remove, AJAX, etc.) --}}
 @endsection
