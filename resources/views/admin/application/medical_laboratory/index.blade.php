@@ -25,9 +25,7 @@
             color: white;
         }
 
-        .card {
-            display: none;
-        }
+
 
         .iso-card {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -524,7 +522,7 @@
                 {{-- STEP 1: About Yourselves                                   --}}
                 {{-- ========================================================== --}}
                 @php $step1 = $mlabData['step1_organisation'] ?? null; @endphp
-                <div class="border rounded p-3 p-md-4 mb-3 bg-white pnac-basic-card" data-section="step1"
+                <div class="border rounded p-3 p-md-4 mb-3 bg-white pnac-step-card" data-section="step1"
                     data-open="{{ $openSection === 'step1' ? '1' : '0' }}">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
@@ -833,6 +831,7 @@
                         <div class="d-flex justify-content-end mt-3"><a href="{{ $editUrl('step1') }}"
                                 class="btn btn-outline-success btn-sm">Edit</a></div>
                     @endif
+                </div>
                 @php
                     $technicalManagement = $mlabData['technical_management'] ?? collect();
                     $qualityManager = $mlabData['quality_manager'] ?? null;
@@ -1403,7 +1402,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const cards = Array.from(document.querySelectorAll(
-                '.pnac-vertical-form #pnacVerticalForm > .pnac-basic-card, .pnac-vertical-form #pnacVerticalForm > .pnac-step-card'
+                '.pnac-vertical-form #pnacVerticalForm > .pnac-step-card'
             ));
             if (!cards.length) return;
 
