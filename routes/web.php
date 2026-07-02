@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\admin\ApplicationController;
+use App\Http\Controllers\CertificationBodies\InspectionBodyController;
+use App\Http\Controllers\HalalCertification\HalalCertificationBodyController;
 use App\Http\Controllers\admin\AssessmentController;
 use App\Http\Controllers\admin\ClientSatisficationController;
 use App\Http\Controllers\admin\SchemeController;
@@ -11,7 +13,6 @@ use Illuminate\Console\Application;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -29,14 +30,15 @@ use Illuminate\Support\Facades\Route;
 // });
 Route::get('/optimize', function () {
     Artisan::call('optimize');
+
     return 'Optimized successfully!';
 });
 
 Route::get('/create-storage-link', function () {
     Artisan::call('storage:link');
+
     return 'Storage link created!';
 });
-
 
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -52,10 +54,11 @@ Route::get('/email/verify', function () {
 
 Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
     $request->fulfill(); // marks user as verified
+
     return redirect('/dashboard'); // or wherever
 })->middleware(['auth', 'signed'])->name('verification.verify');
 
-Route::get('active-account/{email}',[UserController::class, 'active_account'])->name('active_account');
+Route::get('active-account/{email}', [UserController::class, 'active_account'])->name('active_account');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -85,6 +88,14 @@ Route::middleware('auth')->group(function () {
             Route::post('{applicationForLab}/save-calibration-facility', 'saveCalibrationFacility')->name('saveCalibrationFacility');
             Route::post('{applicationForLab}/save-other-approvals', 'saveOtherApprovals')->name('saveOtherApprovals');
             Route::post('{applicationForLab}/save-declaration', 'saveDeclaration')->name('saveDeclaration');
+
+            Route::post('certification-bodies/{cbApplication}/{section}/save', 'saveCbSection')->name('certification.save-section');
+            Route::post('certification-bodies/{cbApplication}/documents', 'uploadCbDocument')->name('certification.documents.store');
+            Route::delete('certification-bodies/{cbApplication}/documents/{document}', 'deleteCbDocument')->name('certification.documents.destroy');
+
+            // Route::post('medical-laboratory/{mlabApplication}/{step}/save', 'saveMedicalLaboratoryStep')->name('medical-laboratory.save-step');
+            // Route::post('medical-laboratory/{mlabApplication}/documents', 'uploadMedicalLaboratoryDocument')->name('medical-laboratory.documents.store');
+            // Route::delete('medical-laboratory/{mlabApplication}/documents/{document}', 'deleteMedicalLaboratoryDocument')->name('medical-laboratory.documents.destroy');
             Route::get('view-scope', 'viewScope')->name('view.scope');
             Route::post('certification-bodies/basic-info', 'saveCertificationBodiesBasicInfo')->name('certificationBodies.saveBasicInfo');
             Route::post('certification-bodies/about-yourselves/{general}', 'saveCertificationBodiesAboutYourselves')->name('certificationBodies.saveAboutYourselves');
@@ -105,8 +116,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/get-categories', 'getCategories')->name('get.categories');
             Route::get('/get-subcategories', 'getSubcategories')->name('get.subcategories');
 
-
-    });
+        });
         // Document store
         Route::post('/document-detail/create', [ApplicationController::class, 'documentStore'])->name('document-detail.create');
 
@@ -125,11 +135,43 @@ Route::middleware('auth')->group(function () {
         // Route::post('application/calibration-facility/store', [ApplicationController::class, 'applicationCalibrationFacilityStore'])->name('application.calibrationFacility.store');
         // Route::post('application/other-approvals/store', [ApplicationController::class, 'applicationOtherApprovalsStore'])->name('application.otherapprovals.store');
         // Route::post('application/declaration/store', [ApplicationController::class, 'applicationDeclarationStore'])->name('application.declaration.store');
-
+        Route::prefix('medical-laboratory')->group(function () {
+            Route::post('/save-step1/{mlabApplication}', [ApplicationController::class, 'saveMlabStep1'])->name('mlab.saveStep1');
+            Route::post('/save-step2/{mlabApplication}', [ApplicationController::class, 'saveMlabStep2'])->name('mlab.saveStep2');
+            Route::post('/save-step3/{mlabApplication}', [ApplicationController::class, 'saveMlabStep3'])->name('mlab.saveStep3');
+            Route::post('/save-step4/{mlabApplication}', [ApplicationController::class, 'saveMlabStep4'])->name('mlab.saveStep4');
+            Route::post('/save-step5/{mlabApplication}', [ApplicationController::class, 'saveMlabStep5'])->name('mlab.saveStep5');
+            Route::post('/save-step6/{mlabApplication}', [ApplicationController::class, 'saveMlabStep6'])->name('mlab.saveStep6');
+            Route::post('/upload-document/{mlabApplication}', [ApplicationController::class, 'uploadMlabDocument'])->name('mlab.uploadDocument');
+            Route::delete('/delete-document/{mlabApplication}/{document}', [ApplicationController::class, 'deleteMlabDocument'])->name('mlab.deleteDocument');
+        });
         // Scheme
         Route::resource('scheme', SchemeController::class);
 
+        // Halal Certification Body Accreditation (F-01/17)
+        Route::prefix('halal-certification-body')->as('hcb.')->group(function () {
+            Route::get('create', [HalalCertificationBodyController::class, 'create'])->name('create');
+            Route::post('{application}/step1', [HalalCertificationBodyController::class, 'saveStep1'])->name('step1.save');
+            Route::post('{application}/step2', [HalalCertificationBodyController::class, 'saveStep2'])->name('step2.save');
+            Route::post('{application}/step3', [HalalCertificationBodyController::class, 'saveStep3'])->name('step3.save');
+            Route::post('{application}/step4', [HalalCertificationBodyController::class, 'saveStep4'])->name('step4.save');
+            Route::post('{application}/step5', [HalalCertificationBodyController::class, 'saveStep5'])->name('step5.save');
+            Route::post('{application}/step6', [HalalCertificationBodyController::class, 'saveStep6'])->name('step6.save');
+            Route::post('{application}/step7', [HalalCertificationBodyController::class, 'saveStep7'])->name('step7.save');
+            Route::post('{application}/documents', [HalalCertificationBodyController::class, 'uploadDocument'])->name('documents.store');
+            Route::delete('{application}/documents/{document}', [HalalCertificationBodyController::class, 'deleteDocument'])->name('documents.destroy');
+        });
 
+        // Inspection Body Accreditation (F-01/10 / ISO/IEC 17020)
+        Route::prefix('inspection-body')->as('inspection-body.')->group(function () {
+            Route::get('create', [InspectionBodyController::class, 'create'])->name('create');
+            Route::post('{application}/step1', [InspectionBodyController::class, 'saveStep1'])->name('step1.save');
+            Route::post('{application}/step2', [InspectionBodyController::class, 'saveStep2'])->name('step2.save');
+            Route::post('{application}/step3', [InspectionBodyController::class, 'saveStep3'])->name('step3.save');
+            Route::post('{application}/step4', [InspectionBodyController::class, 'saveStep4'])->name('step4.save');
+            Route::post('{application}/documents', [InspectionBodyController::class, 'uploadDocument'])->name('documents.store');
+            Route::delete('{application}/documents/{document}', [InspectionBodyController::class, 'deleteDocument'])->name('documents.destroy');
+        });
 
     });
 });

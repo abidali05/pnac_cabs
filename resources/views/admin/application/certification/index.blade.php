@@ -2012,31 +2012,29 @@
 @endif
 
 @php
-    $schemeName = urldecode(request()->query('scheme_name'));
+    $scheme = $scheme_name ?? request('scheme_name');
 @endphp
 
-@if($schemeName === 'Certification Bodies')
-    @include('admin.application.certification.forms.certification_bodies_form')
-@elseif(in_array($schemeName, ['Testing', 'Calibration', 'Testing Calibration Laboratories']))
-    @include('admin.application.certification.forms.laboratory_form')
+@if ($scheme === 'Certification Bodies')
+    @include('admin.application.certification_bodies.form')
+@elseif ($scheme === 'Medical Laboratories')
+    @include('admin.application.medical_laboratory.index')
 @else
-    @include('admin.application.certification.forms.default_form')
+    @include('admin.application.certification.vertical_form')
 @endif
-
-
-
 @endsection
 @section('script')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const cards = Array.from(document.querySelectorAll(
             '.pnac-vertical-form #pnacVerticalForm > .pnac-basic-card, .pnac-vertical-form #pnacVerticalForm > .pnac-step-card'
-            ));
+        ));
         if (!cards.length) return;
 
         const hasBootstrapCollapse = typeof bootstrap !== 'undefined' && typeof bootstrap.Collapse !==
             'undefined';
-        const preferredOpenSection = '{{ session('open_section', request('edit_section')) }}';
+        const preferredOpenSection =
+            '{{ session('open_section') ?: request('open_section') ?: request('edit_section') }}';
 
         cards.forEach(function(card, index) {
             const header = card.querySelector(':scope > .d-flex.justify-content-between');
@@ -2046,7 +2044,7 @@
             const body = document.createElement('div');
             body.id = bodyId;
             body.className = hasBootstrapCollapse ? 'collapse pnac-collapse-body' :
-            'pnac-collapse-body';
+                'pnac-collapse-body';
 
             const childrenToMove = Array.from(card.children).filter(function(child) {
                 return child !== header;
@@ -2092,7 +2090,8 @@
             header.appendChild(actions);
 
             const cardSection = card.getAttribute('data-section');
-            const shouldOpen = preferredOpenSection ? preferredOpenSection === cardSection : index === 0;
+            const shouldOpen = preferredOpenSection ? preferredOpenSection === cardSection : index ===
+                0;
 
             if (shouldOpen) {
                 header.setAttribute('aria-expanded', 'true');
@@ -2146,14 +2145,26 @@
                 });
             }
         });
+
+        // Recalculate open section height after render
+        setTimeout(function() {
+            cards.forEach(function(card) {
+                const collapseBody = card.querySelector('.pnac-collapse-body');
+                if (!collapseBody || hasBootstrapCollapse) return;
+                const hdr = card.querySelector('.pnac-collapsible-header');
+                if (hdr && hdr.getAttribute('aria-expanded') === 'true') {
+                    collapseBody.style.maxHeight = collapseBody.scrollHeight + 'px';
+                }
+            });
+        }, 100);
     });
 </script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         const forms = document.querySelectorAll('.js-card-form');
         if (!forms.length) return;
 
-        const attachError = function (field, message) {
+        const attachError = function(field, message) {
             let holder = field.parentElement.querySelector('.field-error');
             if (!holder) {
                 holder = document.createElement('small');
@@ -2164,19 +2175,20 @@
             field.classList.add('is-invalid');
         };
 
-        const clearError = function (field) {
+        const clearError = function(field) {
             field.classList.remove('is-invalid');
             const holder = field.parentElement.querySelector('.field-error');
             if (holder) holder.remove();
         };
 
-        forms.forEach(function (form) {
+        forms.forEach(function(form) {
             const fields = form.querySelectorAll('input, select, textarea');
 
-            fields.forEach(function (field) {
+            fields.forEach(function(field) {
                 const wrapper = field.closest('div');
                 const label = wrapper ? wrapper.querySelector('label.form-label') : null;
-                const labelText = label ? label.textContent.replace(':', '').trim() : 'This field';
+                const labelText = label ? label.textContent.replace(':', '').trim() :
+                    'This field';
                 if (!field.dataset.error) {
                     field.dataset.error = 'Please enter ' + labelText.toLowerCase() + '.';
                 }
@@ -2188,21 +2200,22 @@
                 }
             });
 
-            fields.forEach(function (field) {
-                field.addEventListener('input', function () {
+            fields.forEach(function(field) {
+                field.addEventListener('input', function() {
                     clearError(field);
                 });
-                field.addEventListener('change', function () {
+                field.addEventListener('change', function() {
                     clearError(field);
                 });
             });
 
-            form.addEventListener('submit', function (event) {
+            form.addEventListener('submit', function(event) {
                 let hasError = false;
-                fields.forEach(function (field) {
+                fields.forEach(function(field) {
                     clearError(field);
 
-                    if (field.disabled || field.type === 'hidden' || field.type === 'button' || field.type === 'submit') {
+                    if (field.disabled || field.type === 'hidden' || field.type ===
+                        'button' || field.type === 'submit') {
                         return;
                     }
 
@@ -2210,7 +2223,8 @@
                         hasError = true;
                         let msg = field.dataset.error || 'This field is required.';
                         if (field.validity.typeMismatch) {
-                            msg = field.dataset.errorType || 'Please enter a valid value.';
+                            msg = field.dataset.errorType ||
+                                'Please enter a valid value.';
                         } else if (field.validity.patternMismatch) {
                             msg = 'Please match the requested format.';
                         } else if (field.validity.tooLong) {
@@ -2229,14 +2243,23 @@
                     event.stopPropagation();
                     const firstInvalid = form.querySelector('.is-invalid');
                     if (firstInvalid) {
-                        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        firstInvalid.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
                         firstInvalid.focus();
                     }
+                    return;
                 }
+
             });
         });
     });
 </script>
+@if (($scheme_name ?? request('scheme_name')) === 'Certification Bodies')
+    <script src="{{ asset('js/certification-bodies.js') }}"></script>
+@endif
+
 @if (false)
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.9.0/dist/summernote.min.js"></script>
@@ -2654,7 +2677,7 @@
                         areas.forEach(area => {
                             $('#technical-area').append(
                                 `<option value="${area.id}">${area.technical_area}</option>`
-                                );
+                            );
                         });
                     }
                 });
@@ -2676,7 +2699,7 @@
                         descriptions.forEach(desc => {
                             $('#description-select').append(
                                 `<option value="${desc.description}">${desc.description}</option>`
-                                );
+                            );
                         });
                     }
                 });
@@ -2746,7 +2769,7 @@
             scopeButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     const type = button.getAttribute(
-                    'data-type'); // Now this matches the ID exactly
+                        'data-type'); // Now this matches the ID exactly
 
                     // Hide all scope sections
                     allSections.forEach(section => {

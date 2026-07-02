@@ -21,6 +21,64 @@
         $isOwnershipSelected = function ($field) use ($labApplication) {
             return !empty($labApplication->{$field});
         };
+
+        // Helpers to load dynamic form schema from $form
+        $formSchema = isset($form) && $form->form_schema ? (is_array($form->form_schema) ? $form->form_schema : json_decode($form->form_schema, true)) : null;
+
+        $getSectionTitle = function(int $sectionIndex, string $defaultTitle) use ($formSchema) {
+            return $formSchema['sections'][$sectionIndex]['title'] ?? $defaultTitle;
+        };
+
+        $getFieldLabel = function(int $sectionIndex, int $fieldIndex, string $defaultLabel) use ($formSchema) {
+            return $formSchema['sections'][$sectionIndex]['fields'][$fieldIndex]['label'] ?? $defaultLabel;
+        };
+
+        $getFieldName = function(int $sectionIndex, int $fieldIndex, string $defaultName) use ($formSchema) {
+            return $formSchema['sections'][$sectionIndex]['fields'][$fieldIndex]['name'] ?? $defaultName;
+        };
+
+        $getFieldType = function(int $sectionIndex, int $fieldIndex, string $defaultType) use ($formSchema) {
+            return $formSchema['sections'][$sectionIndex]['fields'][$fieldIndex]['type'] ?? $defaultType;
+        };
+
+        $basicInfoSection = [
+            'title' => $getSectionTitle(0, 'Basic Application / Laboratory Information'),
+            'fields' => [
+                0 => [
+                    'label' => $getFieldLabel(0, 0, 'Organization'),
+                    'name' => $getFieldName(0, 0, 'organisation'),
+                    'type' => $getFieldType(0, 0, 'text'),
+                ]
+            ]
+        ];
+
+        $aboutYourselfSection = [
+            'title' => $getSectionTitle(1, 'About Yourselves'),
+        ];
+
+        $aboutStaffSection = [
+            'title' => $getSectionTitle(2, 'About Your Staff'),
+        ];
+
+        $calibScopeSection = [
+            'title' => $getSectionTitle(3, 'Scope of Application - Calibration'),
+        ];
+
+        $testingScopeSection = [
+            'title' => $getSectionTitle(4, 'Scope of Application - Testing'),
+        ];
+
+        $calibFacilitySection = [
+            'title' => $getSectionTitle(5, 'Calibration Facility'),
+        ];
+
+        $otherApprovalsSection = [
+            'title' => $getSectionTitle(6, 'Other Approvals'),
+        ];
+
+        $declarationSection = [
+            'title' => $getSectionTitle(7, 'Declaration'),
+        ];
     @endphp
     {{-- @php
         $calibrationRows = json_decode($labApplication->scop_calib_field ?? '[]', true);
@@ -42,7 +100,7 @@
             data-open="{{ $openSection === 'basic_info' ? '1' : '0' }}">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div>
-                    <h5 class="mb-1">Basic Application / Laboratory Information</h5>
+                    <h5 class="mb-1">{{ $basicInfoSection['title'] }}</h5>
                     <p class="text-muted mb-0">General application details captured before Part 1.</p>
                 </div>
                 <span class="badge {{ $basicSaved ? 'bg-success' : 'bg-warning text-dark' }}"
@@ -51,16 +109,18 @@
             @if ($editingBasic)
                 <form method="POST" class="js-card-form" novalidate
                     action="{{ route('application.saveBasicInfo', ['applicationForLab' => $labApplication->id, 'scheme_name' => request('scheme_name'), 'application' => request('application')]) }}">
+
                     @csrf
                     <input type="hidden" name="section" value="basic_info">
                     <div class="row g-3">
-                        <div class="col-md-4"><label class="form-label">Accreditation Scheme</label><input
-                                class="form-control @error('organisation') is-invalid @enderror" name="organisation"
-                                data-label="Accreditation Scheme" data-error="Please enter accreditation scheme."
-                                required maxlength="255" placeholder="Enter accreditation scheme"
-                                value="{{ old('organisation', $labApplication->organisation) }}"><small
-                                class="field-error text-danger" data-error-for="organisation">
-                                @error('organisation')
+                        <div class="col-md-4"><label class="form-label">{{ $basicInfoSection['fields'][0]['label'] }}</label><input
+                                class="form-control @error($basicInfoSection['fields'][0]['name']) is-invalid @enderror" name="{{ $basicInfoSection['fields'][0]['name'] }}"
+                                type="{{ $basicInfoSection['fields'][0]['type'] }}"
+                                data-label="{{ $basicInfoSection['fields'][0]['label'] }}" data-error="Please enter {{ strtolower($basicInfoSection['fields'][0]['label']) }}."
+                                required maxlength="255" placeholder="Enter {{ strtolower($basicInfoSection['fields'][0]['label']) }}"
+                                value="{{ old($basicInfoSection['fields'][0]['name'], $labApplication->certificationGeneral?->scheme) }}"><small
+                                class="field-error text-danger" data-error-for="{{ $basicInfoSection['fields'][0]['name'] }}">
+                                @error($basicInfoSection['fields'][0]['name'])
                                     {{ $message }}
                                 @enderror
                             </small></div>
@@ -68,7 +128,7 @@
                                 class="form-control @error('cab_name') is-invalid @enderror" name="cab_name"
                                 data-label="CAB Name" data-error="Please enter CAB name." required maxlength="255"
                                 placeholder="Enter CAB name"
-                                value="{{ old('cab_name', $labApplication->cab_name) }}"><small
+                                value="{{ old('cab_name', $labApplication->certificationGeneral?->cab_name) }}"><small
                                 class="field-error text-danger" data-error-for="cab_name">
                                 @error('cab_name')
                                     {{ $message }}
@@ -77,7 +137,7 @@
                         <div class="col-md-4"><label class="form-label">Address of Laboratory</label>
                             <textarea class="form-control @error('address_laboratory') is-invalid @enderror" name="address_laboratory"
                                 data-label="Laboratory Address" data-error="Please enter laboratory address." required maxlength="1000"
-                                rows="2" placeholder="Enter complete laboratory address">{{ old('address_laboratory', $labApplication->address_laboratory) }}</textarea><small class="field-error text-danger"
+                                rows="2" placeholder="Enter complete laboratory address">{{ old('address_laboratory', $labApplication->certificationGeneral?->address) }}</textarea><small class="field-error text-danger"
                                 data-error-for="address_laboratory">
                                 @error('address_laboratory')
                                     {{ $message }}
@@ -89,8 +149,8 @@
                                 data-label="Telephone" data-error="Please enter telephone number."
                                 data-error-type="Please enter a valid telephone number." pattern="^[0-9+\-\s]+$"
                                 required minlength="7" maxlength="30" placeholder="e.g. +92-300-1234567"
-                                value="{{ old('tel', $labApplication->tel) }}"><small class="field-error text-danger"
-                                data-error-for="tel">
+                                value="{{ old('tel', $labApplication->certificationGeneral?->telephone) }}"><small
+                                class="field-error text-danger" data-error-for="tel">
                                 @error('tel')
                                     {{ $message }}
                                 @enderror
@@ -100,7 +160,7 @@
                                 data-label="Email" data-error="Please enter email address."
                                 data-error-type="Please enter a valid email address." required maxlength="255"
                                 placeholder="e.g. info@example.com"
-                                value="{{ old('person_email', $labApplication->person_email) }}"><small
+                                value="{{ old('person_email', $labApplication->certificationGeneral?->email) }}"><small
                                 class="field-error text-danger" data-error-for="person_email">
                                 @error('person_email')
                                     {{ $message }}
@@ -110,7 +170,7 @@
                                 class="form-control @error('ntn_ftn') is-invalid @enderror" name="ntn_ftn"
                                 data-label="NTN/FTN" data-error="Please enter NTN/FTN." pattern="^[A-Za-z0-9\\-/]+$"
                                 required maxlength="100" placeholder="Enter NTN/FTN number"
-                                value="{{ old('ntn_ftn', $labApplication->ntn_ftn) }}"><small
+                                value="{{ old('ntn_ftn', $labApplication->certificationGeneral?->ntn_ftn) }}"><small
                                 class="field-error text-danger" data-error-for="ntn_ftn">
                                 @error('ntn_ftn')
                                     {{ $message }}
@@ -121,7 +181,7 @@
                                 data-label="Website" data-error="Please enter website URL."
                                 data-error-type="Please enter a valid website URL." required maxlength="255"
                                 placeholder="e.g. https://example.com"
-                                value="{{ old('website', $labApplication->website) }}"><small
+                                value="{{ old('website', $labApplication->certificationGeneral?->website) }}"><small
                                 class="field-error text-danger" data-error-for="website">
                                 @error('website')
                                     {{ $message }}
@@ -130,7 +190,8 @@
                         <div class="col-md-4"><label class="form-label">City</label><input
                                 class="form-control @error('city') is-invalid @enderror" name="city"
                                 data-label="City" data-error="Please enter city." required maxlength="255"
-                                placeholder="Enter city" value="{{ old('city', $labApplication->city) }}"><small
+                                placeholder="Enter city"
+                                value="{{ old('city', $labApplication->certificationGeneral?->city) }}"><small
                                 class="field-error text-danger" data-error-for="city">
                                 @error('city')
                                     {{ $message }}
@@ -140,7 +201,7 @@
                                 class="form-control @error('country') is-invalid @enderror" name="country"
                                 data-label="Country" data-error="Please enter country." required maxlength="255"
                                 placeholder="Enter country"
-                                value="{{ old('country', $labApplication->country) }}"><small
+                                value="{{ old('country', $labApplication->certificationGeneral?->country) }}"><small
                                 class="field-error text-danger" data-error-for="country">
                                 @error('country')
                                     {{ $message }}
@@ -150,56 +211,64 @@
                                 class="form-control @error('postcode') is-invalid @enderror" name="postcode"
                                 data-label="Postal Code" data-error="Please enter postal code."
                                 pattern="^[A-Za-z0-9\\s-]+$" required maxlength="20" placeholder="Enter postal code"
-                                value="{{ old('postcode', $labApplication->postcode) }}"><small
+                                value="{{ old('postcode', $labApplication->certificationGeneral?->postal_code) }}"><small
                                 class="field-error text-danger" data-error-for="postcode">
                                 @error('postcode')
                                     {{ $message }}
                                 @enderror
-                            </small></div>y
+                            </small></div>
                     </div>
                     <div class="d-flex justify-content-end mt-3"><button type="submit"
                             class="btn btn-success btn-sm">Save Basic Info</button></div>
                 </form>
             @else
                 <div class="details-grid">
-                    <div class="detail-item"><span class="detail-label">Accreditation Scheme:</span><span
-                            class="detail-value">{{ $labApplication->organisation ?: '-' }}</span></div>
+                    <div class="detail-item"><span class="detail-label">{{ $basicInfoSection['fields'][0]['label'] }}:</span><span
+                            class="detail-value">{{ $labApplication->certificationGeneral->scheme ?: '-' }}</span>
+                    </div>
                     <div class="detail-item"><span class="detail-label">CAB Name:</span><span
-                            class="detail-value">{{ $labApplication->cab_name ?: '-' }}</span></div>
+                            class="detail-value">{{ $labApplication->certificationGeneral->cab_name ?: '-' }}</span>
+                    </div>
                     <div class="detail-item"><span class="detail-label">Address of Laboratory:</span><span
-                            class="detail-value">{{ $labApplication->address_laboratory ?: '-' }}</span></div>
+                            class="detail-value">{{ $labApplication->certificationGeneral->address ?: '-' }}</span>
+                    </div>
                     <div class="detail-item"><span class="detail-label">Telephone:</span><span
-                            class="detail-value">{{ $labApplication->tel ?: '-' }}</span></div>
+                            class="detail-value">{{ $labApplication->certificationGeneral->telephone ?: '-' }}</span>
+                    </div>
                     <div class="detail-item">
                         <span class="detail-label">Email:</span>
                         <span class="detail-value">
-                            @if (!empty($labApplication->person_email))
+                            @if (!empty($labApplication->certificationGeneral->email))
                                 <a
-                                    href="mailto:{{ $labApplication->person_email }}">{{ $labApplication->person_email }}</a>
+                                    href="mailto:{{ $labApplication->certificationGeneral->email }}">{{ $labApplication->certificationGeneral->email }}</a>
                             @else
                                 -
                             @endif
                         </span>
                     </div>
                     <div class="detail-item"><span class="detail-label">NTN/FTN:</span><span
-                            class="detail-value">{{ $labApplication->ntn_ftn ?: '-' }}</span></div>
+                            class="detail-value">{{ $labApplication->certificationGeneral->ntn_ftn ?: '-' }}</span>
+                    </div>
                     <div class="detail-item">
                         <span class="detail-label">Website:</span>
                         <span class="detail-value">
-                            @if (!empty($labApplication->website))
-                                <a href="{{ \Illuminate\Support\Str::startsWith($labApplication->website, ['http://', 'https://']) ? $labApplication->website : 'https://' . $labApplication->website }}"
-                                    target="_blank" rel="noopener noreferrer">{{ $labApplication->website }}</a>
+                            @if (!empty($labApplication->certificationGeneral->website))
+                                <a href="{{ \Illuminate\Support\Str::startsWith($labApplication->certificationGeneral->website, ['http://', 'https://']) ? $labApplication->certificationGeneral->website : 'https://' . $labApplication->certificationGeneral->website }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer">{{ $labApplication->certificationGeneral->website }}</a>
                             @else
                                 -
                             @endif
                         </span>
                     </div>
                     <div class="detail-item"><span class="detail-label">City:</span><span
-                            class="detail-value">{{ $labApplication->city ?: '-' }}</span></div>
+                            class="detail-value">{{ $labApplication->certificationGeneral->city ?: '-' }}</span></div>
                     <div class="detail-item"><span class="detail-label">Country:</span><span
-                            class="detail-value">{{ $labApplication->country ?: '-' }}</span></div>
+                            class="detail-value">{{ $labApplication->certificationGeneral->country ?: '-' }}</span>
+                    </div>
                     <div class="detail-item"><span class="detail-label">Postal Code:</span><span
-                            class="detail-value">{{ $labApplication->postcode ?: '-' }}</span></div>
+                            class="detail-value">{{ $labApplication->certificationGeneral->postal_code ?: '-' }}</span>
+                    </div>
                 </div>
                 <div class="d-flex justify-content-end mt-3"><a
                         href="{{ route('application.create', ['scheme_name' => request('scheme_name'), 'application' => request('application'), 'edit_section' => 'basic_info']) }}"
@@ -214,7 +283,7 @@
             data-section="about_yourself" data-open="{{ $openSection === 'about_yourself' ? '1' : '0' }}">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div>
-                    <h5 class="mb-1">Step 1: About Yourselves</h5>
+                    <h5 class="mb-1">Step 1: {{ $aboutYourselfSection['title'] }}</h5>
                     <p class="text-muted mb-0">Part 1 - About yourselves</p>
                 </div>
                 <span class="badge {{ $aboutSaved ? 'bg-success' : 'bg-warning text-dark' }}"
@@ -381,7 +450,7 @@
             $schemeName = urldecode(request()->query('scheme_name', ''));
             $cards = [
                 'about_staff' => [
-                    'title' => 'Step 2: About Your Staff',
+                    'title' => 'Step 2: ' . $aboutStaffSection['title'],
                     'subtitle' => 'Technical management and quality manager details.',
                     'fields' => [
                         ['staff_name', 'Staff Name'],
@@ -394,7 +463,7 @@
                     'route' => 'application.saveAboutStaff',
                 ],
                 'testing_scope' => [
-                    'title' => 'Step 4: Scope of Application - Testing',
+                    'title' => 'Step 4: ' . $testingScopeSection['title'],
                     'subtitle' => 'Testing scope and major equipment records.',
                     'fields' => [
                         ['scop_materials', 'Materials / Products Tested'],
@@ -410,7 +479,7 @@
                     'route' => 'application.saveTestingScope',
                 ],
                 'other_approvals' => [
-                    'title' => 'Step 6: Other Approvals',
+                    'title' => 'Step 6: ' . $otherApprovalsSection['title'],
                     'subtitle' => 'Current approvals and validity.',
                     'fields' => [
                         ['approvals_name', 'Approval Body Name'],
@@ -452,7 +521,7 @@
 
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step {{ $stepNumber }}: Scope of Application - Calibration</h5>
+                            <h5 class="mb-1">Step {{ $stepNumber }}: {{ $calibScopeSection['title'] }}</h5>
                             <p class="text-muted mb-0">Field of measurement and calibration scope rows.</p>
                         </div>
                         <span class="badge {{ $saved ? 'bg-success' : 'bg-warning text-dark' }}">
@@ -574,7 +643,7 @@
 
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step {{ $stepNumber }}: Calibration Facility</h5>
+                            <h5 class="mb-1">Step {{ $stepNumber }}: {{ $calibFacilitySection['title'] }}</h5>
                             <p class="text-muted mb-0">Facility readiness and compliance checks.</p>
                         </div>
                         <span class="badge {{ $saved ? 'bg-success' : 'bg-warning text-dark' }}">
@@ -834,7 +903,7 @@
 
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h5 class="mb-1">Step {{ $stepNumber }}: Declaration</h5>
+                            <h5 class="mb-1">Step {{ $stepNumber }}: {{ $declarationSection['title'] }}</h5>
                             <p class="text-muted mb-0">Applicant declaration and accreditation selection.</p>
                         </div>
                         <span class="badge {{ $saved ? 'bg-success' : 'bg-warning text-dark' }}">
