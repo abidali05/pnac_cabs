@@ -8,6 +8,7 @@
         'rows'     => $firstRow($scopes, array_fill_keys(array_keys($scopeCols), '')),
         'columns'  => $scopeCols,
         'isLocked' => $isLocked,
+        'allowMultiple' => true,
     ])
 
     <div class="d-flex justify-content-end mt-3">

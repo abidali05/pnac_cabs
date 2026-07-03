@@ -77,15 +77,15 @@
 
         .details-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px 24px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px 24px;
             padding: .25rem 0;
         }
 
         .detail-item {
             display: flex;
-            align-items: flex-start;
-            gap: 8px;
+            flex-direction: column;
+            gap: 4px;
             font-size: 14px;
             line-height: 1.5;
             min-width: 0;
@@ -94,8 +94,6 @@
         .detail-label {
             font-weight: 700;
             color: #1f2937;
-            min-width: 140px;
-            flex-shrink: 0;
         }
 
         .detail-value {
@@ -110,13 +108,7 @@
             margin-top: .25rem;
         }
 
-        @media(max-width:992px) {
-            .details-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-        }
-
-        @media(max-width:576px) {
+        @media (max-width: 768px) {
             .details-grid {
                 grid-template-columns: 1fr;
             }

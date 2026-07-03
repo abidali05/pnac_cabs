@@ -29,6 +29,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ── Add row — event delegation (works on collapsed/hidden sections) ────────
     document.addEventListener("click", function (event) {
+        if (!document.querySelector(".cb-application-form")) return;
+
         var btn = event.target.closest(".js-add-row");
         if (!btn) return;
 
@@ -56,6 +58,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ── Remove row — event delegation ─────────────────────────────────────────
     document.addEventListener("click", function (event) {
+        if (!document.querySelector(".cb-application-form")) return;
+
         var btn = event.target.closest(".js-remove-row");
         if (!btn) return;
 

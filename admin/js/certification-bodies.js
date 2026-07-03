@@ -35,6 +35,8 @@ if (window.__cbRepeatableTableInit) {
 
         // ── Add row — event delegation (works on collapsed/hidden sections) ────────
         document.addEventListener("click", function (event) {
+            if (!document.querySelector(".cb-application-form")) return;
+
             var btn = event.target.closest(".js-add-row");
             if (!btn) return;
 
@@ -67,6 +69,8 @@ if (window.__cbRepeatableTableInit) {
 
         // ── Remove row — event delegation ─────────────────────────────────────────
         document.addEventListener("click", function (event) {
+            if (!document.querySelector(".cb-application-form")) return;
+
             var btn = event.target.closest(".js-remove-row");
             if (!btn) return;
 
@@ -156,6 +160,10 @@ if (window.__cbRepeatableTableInit) {
 
                 var missing = [];
                 form.querySelectorAll("[required]").forEach(function (field) {
+                    // Skip disabled or hidden fields
+                    if (field.disabled || field.offsetParent === null || field.closest('.d-none')) {
+                        return;
+                    }
                     if (field.type === "radio") {
                         var checked = form.querySelector(
                             'input[name="' + field.name + '"]:checked',

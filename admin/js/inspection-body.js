@@ -31,6 +31,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ── Add row (event delegation) ────────────────────────────────────────────
     document.addEventListener("click", function (e) {
+        if (!document.querySelector(".ib-application-form")) return;
+
         var btn = e.target.closest(".js-add-row");
         if (!btn) return;
 
@@ -58,6 +60,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ── Remove row (event delegation) ─────────────────────────────────────────
     document.addEventListener("click", function (e) {
+        if (!document.querySelector(".ib-application-form")) return;
+
         var btn   = e.target.closest(".js-remove-row");
         if (!btn) return;
 
