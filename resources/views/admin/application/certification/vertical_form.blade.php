@@ -498,6 +498,12 @@
                 'other_approvals',
                 'declaration',
             ];
+
+            if ($schemeName === 'Calibration') {
+                $orderedSections = array_values(array_diff($orderedSections, ['testing_scope']));
+            } elseif ($schemeName === 'Testing') {
+                $orderedSections = array_values(array_diff($orderedSections, ['calibration_scope', 'calibration_facility']));
+            }
             $stepCounter = 2; // Step 1 is already used by "About Yourselves"
         @endphp
         {{-- Calibration Scope - Dynamic Rows --}}
@@ -1178,7 +1184,7 @@
 
 <script>
     // ----- CKEditor initialization -----
-    let calibRowCount = 1;
+    let calibRowCount = {{ !empty($calibrationRows) ? count($calibrationRows) : 1 }};
 
     function initEditors(context = document) {
         // Check if CKEditor is loaded
@@ -1204,6 +1210,15 @@
                 });
         });
     }
+
+    // Sync CKEditor data to textarea value on form submit
+    document.addEventListener('submit', function(event) {
+        event.target.querySelectorAll('.ckeditor').forEach(el => {
+            if (el.ckeditorInstance) {
+                el.value = el.ckeditorInstance.getData();
+            }
+        });
+    });
 
     // Initial call after DOM ready
     document.addEventListener('DOMContentLoaded', function() {
