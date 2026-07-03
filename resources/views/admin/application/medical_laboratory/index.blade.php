@@ -148,15 +148,15 @@
 
         .details-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px 24px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px 24px;
             padding: 0.25rem 0;
         }
 
         .detail-item {
             display: flex;
-            align-items: flex-start;
-            gap: 8px;
+            flex-direction: column;
+            gap: 4px;
             font-size: 14px;
             line-height: 1.5;
             min-width: 0;
@@ -165,8 +165,6 @@
         .detail-label {
             font-weight: 700;
             color: #1f2937;
-            min-width: 140px;
-            flex-shrink: 0;
         }
 
         .detail-value {
@@ -186,24 +184,9 @@
             margin-top: 0.25rem;
         }
 
-        @media (max-width: 992px) {
-            .details-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-        }
-
-        @media (max-width: 576px) {
+        @media (max-width: 768px) {
             .details-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .detail-item {
-                flex-direction: column;
-                gap: 2px;
-            }
-
-            .detail-label {
-                min-width: auto;
             }
         }
 
@@ -886,9 +869,7 @@
                                 'isLocked' => $isLocked,
                             ])
                             @php
-                                $qm = $qualityManager
-                                    ? collect([$qualityManager])
-                                    : collect([array_fill_keys(array_keys($qmCols), '')]);
+                                $qm = $firstRow($qualityManager, array_fill_keys(array_keys($qmCols), ''));
                             @endphp
 
                             @include('admin.application.medical_laboratory._repeatable_table', [
@@ -898,7 +879,6 @@
                                 'rows' => $qm,
                                 'columns' => $qmCols,
                                 'isLocked' => $isLocked,
-                                'allowAdd' => false,
                             ])
                             @include('admin.application.medical_laboratory._repeatable_table', [
                                 'title' => $labStaffTitle,
