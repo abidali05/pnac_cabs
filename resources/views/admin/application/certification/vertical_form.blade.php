@@ -23,21 +23,26 @@
         };
 
         // Helpers to load dynamic form schema from $form
-        $formSchema = isset($form) && $form->form_schema ? (is_array($form->form_schema) ? $form->form_schema : json_decode($form->form_schema, true)) : null;
+        $formSchema =
+            isset($form) && $form->form_schema
+                ? (is_array($form->form_schema)
+                    ? $form->form_schema
+                    : json_decode($form->form_schema, true))
+                : null;
 
-        $getSectionTitle = function(int $sectionIndex, string $defaultTitle) use ($formSchema) {
+        $getSectionTitle = function (int $sectionIndex, string $defaultTitle) use ($formSchema) {
             return $formSchema['sections'][$sectionIndex]['title'] ?? $defaultTitle;
         };
 
-        $getFieldLabel = function(int $sectionIndex, int $fieldIndex, string $defaultLabel) use ($formSchema) {
+        $getFieldLabel = function (int $sectionIndex, int $fieldIndex, string $defaultLabel) use ($formSchema) {
             return $formSchema['sections'][$sectionIndex]['fields'][$fieldIndex]['label'] ?? $defaultLabel;
         };
 
-        $getFieldName = function(int $sectionIndex, int $fieldIndex, string $defaultName) use ($formSchema) {
+        $getFieldName = function (int $sectionIndex, int $fieldIndex, string $defaultName) use ($formSchema) {
             return $formSchema['sections'][$sectionIndex]['fields'][$fieldIndex]['name'] ?? $defaultName;
         };
 
-        $getFieldType = function(int $sectionIndex, int $fieldIndex, string $defaultType) use ($formSchema) {
+        $getFieldType = function (int $sectionIndex, int $fieldIndex, string $defaultType) use ($formSchema) {
             return $formSchema['sections'][$sectionIndex]['fields'][$fieldIndex]['type'] ?? $defaultType;
         };
 
@@ -48,8 +53,8 @@
                     'label' => $getFieldLabel(0, 0, 'Organization'),
                     'name' => $getFieldName(0, 0, 'organisation'),
                     'type' => $getFieldType(0, 0, 'text'),
-                ]
-            ]
+                ],
+            ],
         ];
 
         $aboutYourselfSection = [
@@ -66,6 +71,10 @@
 
         $testingScopeSection = [
             'title' => $getSectionTitle(4, 'Scope of Application - Testing'),
+        ];
+
+        $personnelScopeSection = [
+            'title' => $getSectionTitle(4, 'Scope of Personnel Certification – Categories'),
         ];
 
         $calibFacilitySection = [
@@ -88,7 +97,8 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-        <h4 class="mb-0 text-success">Application For Laboratory Accreditation ISO/IEC 17025</h4>
+        <h4 class="mb-0 text-success">Application For
+            {{ urldecode(request()->query('scheme_name') ?: 'Laboratory Accreditation') }}</h4>
         <span class="badge bg-success">{{ urldecode(request()->query('scheme_name')) }}</span>
     </div>
     <div id="pnacVerticalForm" class="w-100">
@@ -113,13 +123,18 @@
                     @csrf
                     <input type="hidden" name="section" value="basic_info">
                     <div class="row g-3">
-                        <div class="col-md-4"><label class="form-label">{{ $basicInfoSection['fields'][0]['label'] }}</label><input
-                                class="form-control @error($basicInfoSection['fields'][0]['name']) is-invalid @enderror" name="{{ $basicInfoSection['fields'][0]['name'] }}"
+                        <div class="col-md-4"><label
+                                class="form-label">{{ $basicInfoSection['fields'][0]['label'] }}</label><input
+                                class="form-control @error($basicInfoSection['fields'][0]['name']) is-invalid @enderror"
+                                name="{{ $basicInfoSection['fields'][0]['name'] }}"
                                 type="{{ $basicInfoSection['fields'][0]['type'] }}"
-                                data-label="{{ $basicInfoSection['fields'][0]['label'] }}" data-error="Please enter {{ strtolower($basicInfoSection['fields'][0]['label']) }}."
-                                required maxlength="255" placeholder="Enter {{ strtolower($basicInfoSection['fields'][0]['label']) }}"
+                                data-label="{{ $basicInfoSection['fields'][0]['label'] }}"
+                                data-error="Please enter {{ strtolower($basicInfoSection['fields'][0]['label']) }}."
+                                required maxlength="255"
+                                placeholder="Enter {{ strtolower($basicInfoSection['fields'][0]['label']) }}"
                                 value="{{ old($basicInfoSection['fields'][0]['name'], $labApplication->certificationGeneral?->scheme) }}"><small
-                                class="field-error text-danger" data-error-for="{{ $basicInfoSection['fields'][0]['name'] }}">
+                                class="field-error text-danger"
+                                data-error-for="{{ $basicInfoSection['fields'][0]['name'] }}">
                                 @error($basicInfoSection['fields'][0]['name'])
                                     {{ $message }}
                                 @enderror
@@ -223,7 +238,8 @@
                 </form>
             @else
                 <div class="details-grid">
-                    <div class="detail-item"><span class="detail-label">{{ $basicInfoSection['fields'][0]['label'] }}:</span><span
+                    <div class="detail-item"><span
+                            class="detail-label">{{ $basicInfoSection['fields'][0]['label'] }}:</span><span
                             class="detail-value">{{ $labApplication->certificationGeneral->scheme ?: '-' }}</span>
                     </div>
                     <div class="detail-item"><span class="detail-label">CAB Name:</span><span
@@ -502,7 +518,15 @@
             if ($schemeName === 'Calibration') {
                 $orderedSections = array_values(array_diff($orderedSections, ['testing_scope']));
             } elseif ($schemeName === 'Testing') {
-                $orderedSections = array_values(array_diff($orderedSections, ['calibration_scope', 'calibration_facility']));
+                $orderedSections = array_values(
+                    array_diff($orderedSections, ['calibration_scope', 'calibration_facility']),
+                );
+            } elseif ($schemeName === 'Proficiency Testing Provider') {
+                $orderedSections = ['about_staff', 'ptp_scope', 'other_approvals', 'declaration'];
+            } elseif ($schemeName === 'Product Certification Bodies') {
+                $orderedSections = ['about_staff', 'pcb_scope', 'other_approvals', 'declaration'];
+            } elseif ($schemeName === 'Personnel Certification Bodies') {
+                $orderedSections = ['about_staff', 'personnel_scope', 'other_approvals', 'declaration'];
             }
             $stepCounter = 2; // Step 1 is already used by "About Yourselves"
         @endphp
@@ -639,6 +663,12 @@
                         </div>
                     @endif
                 </div>
+            @elseif ($sectionKey === 'ptp_scope')
+                @include('admin.application.proficiency_testing_provider.sections.ptp_scope')
+            @elseif ($sectionKey === 'pcb_scope')
+                @include('admin.application.product_certification_bodies.sections.pcb_scope')
+            @elseif ($sectionKey === 'personnel_scope')
+                @include('admin.application.personnel_certification_bodies.sections.personnel_scope')
             @elseif ($sectionKey === 'calibration_facility')
                 {{-- ========================================== --}}
                 {{-- Step 5: Calibration Facility (custom)      --}}
