@@ -7,6 +7,7 @@ use App\Models\CertificationScope;
 use App\Models\HalalScope;
 use App\Models\MedicalScope;
 use App\Models\InspectionScope;
+use App\Models\PersonnelCertificationScope;
 use App\Models\PersonnelScope;
 use App\Models\ProductScope;
 use App\Models\ProficiencyScope;

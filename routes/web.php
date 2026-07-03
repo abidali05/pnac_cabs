@@ -87,6 +87,7 @@ Route::middleware('auth')->group(function () {
             Route::post('{applicationForLab}/save-testing-scope', 'saveTestingScope')->name('saveTestingScope');
             Route::post('{applicationForLab}/save-ptp-scope', 'savePtpScope')->name('savePtpScope');
             Route::post('{applicationForLab}/save-pcb-scope', 'savePcbScope')->name('savePcbScope');
+            Route::post('{applicationForLab}/save-personnel-scope', 'savePersonnelScope')->name('savePersonnelScope');
             Route::post('{applicationForLab}/save-calibration-facility', 'saveCalibrationFacility')->name('saveCalibrationFacility');
             Route::post('{applicationForLab}/save-other-approvals', 'saveOtherApprovals')->name('saveOtherApprovals');
             Route::post('{applicationForLab}/save-declaration', 'saveDeclaration')->name('saveDeclaration');

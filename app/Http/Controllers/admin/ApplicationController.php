@@ -49,6 +49,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class ApplicationController extends Controller
 {
@@ -381,12 +382,14 @@ class ApplicationController extends Controller
             'declaration' => ! empty($labApplication->signed) || ! empty($labApplication->date),
             'ptp_scope' => $labApplication->ptpScopes()->exists(),
             'pcb_scope' => $labApplication->pcbScopes()->exists(),
+            'personnel_scope' => $labApplication->personnelScopes()->exists(),
         ];
 
         $ptpScopes = $labApplication->ptpScopes;
         $pcbScopes = $labApplication->pcbScopes;
+        $personnelScopes = $labApplication->personnelScopes;
 
-        return view('admin.application.certification.index', compact('cbApplication', 'cbData', 'labApplication', 'savedSections', 'scopes', 'scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries', 'form', 'ptpScopes', 'pcbScopes'));
+        return view('admin.application.certification.index', compact('cbApplication', 'cbData', 'labApplication', 'savedSections', 'scopes', 'scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries', 'form', 'ptpScopes', 'pcbScopes', 'personnelScopes'));
     }
 
     private function loadCbApplicationData(CbApplication $application): array
@@ -448,7 +451,7 @@ class ApplicationController extends Controller
         $form = \App\Models\ApplicationForm::where('application_name', $scheme_name)
             ->orWhere('slug', \Str::slug($scheme_name))
             ->first();
-        
+
         $orgFieldName = 'organisation';
         if ($form && isset($form->form_schema['sections'][0]['fields'][0]['name'])) {
             $orgFieldName = $form->form_schema['sections'][0]['fields'][0]['name'];
@@ -669,6 +672,29 @@ class ApplicationController extends Controller
             'application' => $request->query('application'),
         ])->with('success', 'Product Certification Body scope saved successfully.')
             ->with('open_section', 'pcb_scope');
+    }
+
+    public function savePersonnelScope(Request $request, ApplicationForLab $applicationForLab)
+    {
+        $validator = Validator::make($request->all(), [
+            'personnel_scope' => 'required|array',
+            'personnel_scope.*.technical_cluster' => 'required|string',
+            'personnel_scope.*.description_iaf' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()->with('open_section', 'personnel_scope');
+        }
+
+        $data = $validator->validated();
+
+        $this->replaceRows('personnel_certification_scopes', $applicationForLab->id, $data['personnel_scope']);
+
+        return redirect()->route('application.create', [
+            'scheme_name' => $request->query('scheme_name'),
+            'application' => $request->query('application'),
+        ])->with('success', 'Personnel Certification Bodies scope saved successfully.')
+            ->with('open_section', 'personnel_scope');
     }
 
     public function saveCalibrationFacility(Request $request, ApplicationForLab $applicationForLab)
