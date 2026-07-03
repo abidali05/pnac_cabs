@@ -34,6 +34,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ── Add row (event delegation) ────────────────────────────────────────────
     document.addEventListener("click", function (event) {
+        if (!document.querySelector(".mlab-application-form")) return;
+
         const addButton = event.target.closest(".js-add-row");
 
         if (!addButton) return;
@@ -67,6 +69,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ── Remove row (event delegation) ─────────────────────────────────────────
     document.addEventListener("click", function (event) {
+        if (!document.querySelector(".mlab-application-form")) return;
+
         const removeButton = event.target.closest(".js-remove-row");
         if (!removeButton) return;
 

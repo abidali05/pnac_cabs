@@ -349,7 +349,8 @@
                     class="badge {{ $isSaved('basic_info') ? 'bg-success' : 'bg-warning text-dark' }}">{{ $isSaved('basic_info') ? 'Saved' : 'Unsaved' }}</span>
             </div>
             @if ($isEditing('basic_info'))
-                <form method="POST" action="{{ $sectionUrl('basic_info') }}" class="js-card-form cb-js-card-form">
+                <form method="POST" action="{{ $sectionUrl('basic_info') }}" class="js-card-form cb-js-card-form"
+                    novalidate>
                     @csrf
                     <div class="row g-3">
                         <div class="col-md-4"><label
@@ -437,7 +438,7 @@
             </div>
             @if ($isEditing('about_yourselves'))
                 <form method="POST" action="{{ $sectionUrl('about_yourselves') }}"
-                    class="js-card-form cb-js-card-form">
+                    class="js-card-form cb-js-card-form" novalidate>
                     @csrf
                     <div class="row g-3">
                         {{-- <div class="col-md-3"><label class="form-label">Title</label><input class="form-control" name="authorized_person[title]" value="{{ $authorized->title ?? '' }}"></div> --}}
@@ -472,20 +473,24 @@
                                         {{ $type }}</option>
                                 @endforeach
                             </select></div>
-                        <div class="col-md-8 cb-ownership-other"><label class="form-label">{{ $getLabel('About Yourselves', 'ownership_other_description', 'Other Description') }} <span class="text-danger">*</span></label><input class="form-control"
+                        <div class="col-md-8 cb-ownership-other"><label
+                                class="form-label">{{ $getLabel('About Yourselves', 'ownership_other_description', 'Other Description') }}
+                                <span class="text-danger">*</span></label><input class="form-control"
                                 name="parent_organization[ownership_other_description]"
                                 value="{{ $parent->ownership_other_description ?? '' }}" required></div>
                         <div class="col-md-4"><label
                                 class="form-label">{{ $getLabel('About Yourselves', 'main_activity', 'Main Activity?') }}
                                 <span class="text-danger">*</span></label><select
-                                class="form-control cb-main-activity-select" name="parent_organization[main_activity]"
-                                required>
+                                class="form-control cb-main-activity-select"
+                                name="parent_organization[main_activity]">
                                 <option value="">Select</option>
                                 <option value="yes" @selected(($parent->main_activity ?? '') === 'yes')>Yes</option>
                                 <option value="no" @selected(($parent->main_activity ?? '') === 'no')>No</option>
                             </select></div>
-                        <div class="col-md-8 cb-main-activity-description"><label class="form-label">{{ $getLabel('About Yourselves', 'main_activity_description', 'If No, describe') }} <span class="text-danger">*</span></label>
-                            <textarea class="form-control" name="parent_organization[main_activity_description]" required>{{ $parent->main_activity_description ?? '' }}</textarea>
+                        <div class="col-md-8 cb-main-activity-description"><label
+                                class="form-label">{{ $getLabel('About Yourselves', 'main_activity_description', 'If No, describe') }}
+                                <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="parent_organization[main_activity_description]">{{ $parent->main_activity_description ?? '' }}</textarea>
                         </div>
                         @foreach (['organization' => 'Invoice Organization', 'address' => 'Invoice Address', 'postcode' => 'Invoice Postcode', 'telephone' => 'Invoice Telephone', 'fax' => 'Invoice Fax'] as $field => $fallbackLabel)
                             <div class="col-md-4"><label
@@ -501,10 +506,10 @@
                                     : 'consultant_' . $field;
                             @endphp
                             <div class="col-md-4"><label
-                                    class="form-label">{{ $getLabel('About Yourselves', $schemaFieldName, $fallbackLabel) }}
-                                    <span class="text-danger">*</span></label><input class="form-control"
-                                    name="consultant[{{ $field }}]" value="{{ $consultant->{$field} ?? '' }}"
-                                    required @if ($field === 'email') type="email" @endif></div>
+                                    class="form-label">{{ $getLabel('About Yourselves', $schemaFieldName, $fallbackLabel) }}</label><input
+                                    class="form-control" name="consultant[{{ $field }}]"
+                                    value="{{ $consultant->{$field} ?? '' }}"
+                                    @if ($field === 'email') type="email" @endif></div>
                         @endforeach
                     </div>
                     <div class="d-flex justify-content-end mt-3"><button class="btn btn-success btn-sm">Save
@@ -601,7 +606,8 @@
                     class="badge {{ $isSaved('staff_info') ? 'bg-success' : 'bg-warning text-dark' }}">{{ $isSaved('staff_info') ? 'Saved' : 'Unsaved' }}</span>
             </div>
             @if ($isEditing('staff_info'))
-                <form method="POST" action="{{ $sectionUrl('staff_info') }}" class="js-card-form cb-js-card-form">
+                <form method="POST" action="{{ $sectionUrl('staff_info') }}" class="js-card-form cb-js-card-form"
+                    novalidate>
                     @csrf
                     @include('admin.application.certification_bodies._repeatable_table', [
                         'title' => 'Chief Executive',
@@ -612,6 +618,7 @@
                             array_fill_keys(array_keys($chiefColumns), '')),
                         'columns' => $chiefColumns,
                         'isLocked' => $isLocked,
+                        'allowMultiple' => true,
                     ])
                     @include('admin.application.certification_bodies._repeatable_table', [
                         'title' => 'Quality Management Representative',
@@ -622,6 +629,7 @@
                             array_fill_keys(array_keys($qualityColumns), '')),
                         'columns' => $qualityColumns,
                         'isLocked' => $isLocked,
+                        'allowMultiple' => true,
                     ])
                     @include('admin.application.certification_bodies._repeatable_table', [
                         'title' => $managementTitle,
@@ -688,7 +696,7 @@
             </div>
             @if ($isEditing('scope_application'))
                 <form method="POST" action="{{ $sectionUrl('scope_application') }}"
-                    class="js-card-form cb-js-card-form">
+                    class="js-card-form cb-js-card-form" novalidate>
                     @csrf
                     @foreach ($dynamicScopeGroups as $name => $group)
                         @include('admin.application.certification_bodies._repeatable_table', [
@@ -771,7 +779,7 @@
             </div>
             @if ($isEditing('quality_system'))
                 <form method="POST" action="{{ $sectionUrl('quality_system') }}"
-                    class="js-card-form cb-js-card-form">
+                    class="js-card-form cb-js-card-form" novalidate>
                     @csrf
                     <label
                         class="fw-semibold">{{ $getLabel('About Your Quality System', 'does_the_certification_body_comply_with_iso_iec_17021_1_and_pnac_requirements', 'Does the Certification Body comply with ISO/IEC 17021-1 and PNAC requirements?') }}
@@ -839,7 +847,7 @@
             </div>
             @if ($isEditing('other_approvals'))
                 <form method="POST" action="{{ $sectionUrl('other_approvals') }}"
-                    class="js-card-form cb-js-card-form">
+                    class="js-card-form cb-js-card-form" novalidate>
                     @csrf
                     @include('admin.application.certification_bodies._repeatable_table', [
                         'title' => $otherApprovalsTitle,
@@ -876,7 +884,8 @@
                     class="badge {{ $isSaved('declaration') ? 'bg-success' : 'bg-warning text-dark' }}">{{ $isSaved('declaration') ? 'Saved' : 'Unsaved' }}</span>
             </div>
             @if ($isEditing('declaration'))
-                <form method="POST" action="{{ $sectionUrl('declaration') }}" class="js-card-form cb-js-card-form">
+                <form method="POST" action="{{ $sectionUrl('declaration') }}" class="js-card-form cb-js-card-form"
+                    novalidate>
                     @csrf
                     <div class="row g-3">
                         <div class="col-md-12"><label class="form-check"><input class="form-check-input"

@@ -10,7 +10,6 @@
         'rows'     => $firstRow($staffRoles->get('Chief Executive', collect()), array_fill_keys(array_keys($ceCols), '')),
         'columns'  => $ceCols,
         'isLocked' => $isLocked,
-        'allowAdd' => false,
     ])
 
     {{-- Quality Management Representative --}}
@@ -21,7 +20,6 @@
         'rows'     => $firstRow($staffRoles->get('Quality Management Representative', collect()), array_fill_keys(array_keys($qmrCols), '')),
         'columns'  => $qmrCols,
         'isLocked' => $isLocked,
-        'allowAdd' => false,
     ])
 
     {{-- Management Members --}}

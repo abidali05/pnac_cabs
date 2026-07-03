@@ -418,7 +418,7 @@ class ApplicationController extends Controller
         }
 
         $savedSections = [
-            'basic_info' => ! empty($application->organization_name),
+            'basic_info' => ! empty($application->application_no),
             'body_info' => ! empty(optional($data['contact'])->certification_body_name),
             'accreditation_request' => $data['requested_scopes']->isNotEmpty(),
             'documents' => $data['documents']->isNotEmpty(),
@@ -1275,7 +1275,7 @@ class ApplicationController extends Controller
 
         $qualityManager = DB::table('mlab_quality_manager')
             ->where('mlab_application_id', $application->id)
-            ->first();
+            ->get();
 
         $labStaff = DB::table('mlab_lab_staff')
             ->where('mlab_application_id', $application->id)
@@ -1334,7 +1334,7 @@ class ApplicationController extends Controller
         // Build saved sections status
         $savedSections = [
             'step1' => (bool) $step1,
-            'step2' => $technicalManagement->isNotEmpty() || (bool) $qualityManager || $labStaff->isNotEmpty(),
+            'step2' => $technicalManagement->isNotEmpty() || $qualityManager->isNotEmpty() || $labStaff->isNotEmpty(),
             'step3' => $scopeTests->isNotEmpty() || $equipment->isNotEmpty() || $referenceMaterials->isNotEmpty() || $proficiencyTesting->isNotEmpty(),
             'step4' => (bool) $calibrationSystem || (bool) $isoCompliance,
             'step5' => $otherApprovals->isNotEmpty(),
@@ -1368,11 +1368,23 @@ class ApplicationController extends Controller
         DB::table($table)->where('mlab_application_id', $applicationId)->delete();
 
         foreach ($rows as $row) {
-            $row = array_filter($row, fn ($value) => $value !== null && $value !== '');
-            if (empty($row)) {
+            $hasContent = false;
+            foreach ($row as $v) {
+                if ($v !== null && $v !== '') {
+                    $hasContent = true;
+                    break;
+                }
+            }
+            if (!$hasContent) {
                 continue;
             }
-            DB::table($table)->insert($this->timestamps(array_merge($row, ['mlab_application_id' => $applicationId])));
+
+            $insertData = [];
+            foreach ($row as $k => $v) {
+                $insertData[$k] = ($v === null) ? '' : $v;
+            }
+
+            DB::table($table)->insert($this->timestamps(array_merge($insertData, ['mlab_application_id' => $applicationId])));
         }
     }
 
@@ -1541,19 +1553,30 @@ class ApplicationController extends Controller
         // Laboratory Staff
         $this->replaceMlabRows('mlab_lab_staff', $mlabApplication->id, $data['lab_staff'] ?? []);
 
-        // Quality Manager – always delete existing and insert the first non‑empty row
+        // Quality Manager - insert all non-empty rows with empty string fallback
         DB::table('mlab_quality_manager')->where('mlab_application_id', $mlabApplication->id)->delete();
 
         $qmData = $data['quality_manager'] ?? [];
-        // Find the first row that has any value
         foreach ($qmData as $row) {
-            $row = array_filter($row, fn ($v) => $v !== null && $v !== '');
-            if (! empty($row)) {
-                DB::table('mlab_quality_manager')->insert(
-                    $this->timestamps(array_merge($row, ['mlab_application_id' => $mlabApplication->id]))
-                );
-                break; // only insert one row
+            $hasContent = false;
+            foreach ($row as $v) {
+                if ($v !== null && $v !== '') {
+                    $hasContent = true;
+                    break;
+                }
             }
+            if (!$hasContent) {
+                continue;
+            }
+
+            $insertData = [];
+            foreach ($row as $k => $v) {
+                $insertData[$k] = ($v === null) ? '' : $v;
+            }
+
+            DB::table('mlab_quality_manager')->insert(
+                $this->timestamps(array_merge($insertData, ['mlab_application_id' => $mlabApplication->id]))
+            );
         }
 
         return $this->mlabSectionResponse($request, 'Step 2 saved successfully.', 'step2');
