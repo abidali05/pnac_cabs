@@ -874,5 +874,5 @@
             });
         });
     </script>
-    <script src="{{ asset('js/halal-certification.js') }}"></script>
+    <script src="{{ url('admin/js/halal-certification.js') }}?v={{ time() }}"></script>
 @endsection

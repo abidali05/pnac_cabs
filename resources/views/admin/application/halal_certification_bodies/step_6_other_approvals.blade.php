@@ -8,6 +8,7 @@
         'rows'     => $firstRow($approvals, array_fill_keys(array_keys($otherCols), '')),
         'columns'  => $otherCols,
         'isLocked' => $isLocked,
+        'allowMultiple' => true,
     ])
 
     <div class="d-flex justify-content-end mt-3">
