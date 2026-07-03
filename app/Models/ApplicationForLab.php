@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\PersonnelCertificationScope;
 
 class ApplicationForLab extends Model
 {
@@ -112,5 +113,20 @@ class ApplicationForLab extends Model
     public function certificationGeneral()
     {
         return $this->belongsTo(CertificationGeneral::class, 'certification_general_id');
+    }
+
+    public function ptpScopes()
+    {
+        return $this->hasMany(PtpScope::class, 'application_id');
+    }
+
+    public function pcbScopes()
+    {
+        return $this->hasMany(ProductCertificationScope::class, 'application_id');
+    }
+
+    public function personnelScopes()
+    {
+        return $this->hasMany(PersonnelCertificationScope::class, 'application_id');
     }
 }
