@@ -466,7 +466,7 @@
             $schemeName = urldecode(request()->query('scheme_name', ''));
             $cards = [
                 'about_staff' => [
-                    'title' => 'Step 2: ' . $aboutStaffSection['title'],
+                    'title' => $aboutStaffSection['title'],
                     'subtitle' => 'Technical management and quality manager details.',
                     'fields' => [
                         ['staff_name', 'Staff Name'],
@@ -479,7 +479,7 @@
                     'route' => 'application.saveAboutStaff',
                 ],
                 'testing_scope' => [
-                    'title' => 'Step 4: ' . $testingScopeSection['title'],
+                    'title' => $testingScopeSection['title'],
                     'subtitle' => 'Testing scope and major equipment records.',
                     'fields' => [
                         ['scop_materials', 'Materials / Products Tested'],
@@ -495,7 +495,7 @@
                     'route' => 'application.saveTestingScope',
                 ],
                 'other_approvals' => [
-                    'title' => 'Step 6: ' . $otherApprovalsSection['title'],
+                    'title' => $otherApprovalsSection['title'],
                     'subtitle' => 'Current approvals and validity.',
                     'fields' => [
                         ['approvals_name', 'Approval Body Name'],
