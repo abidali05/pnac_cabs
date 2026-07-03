@@ -100,8 +100,9 @@ class ScopeFetcher
             ];
 
         case 'Product Certification Bodies':
+            $labApp = \App\Models\ApplicationForLab::where('certification_general_id', $generalId)->first();
             return [
-                'product' => ProductScope::where('certification_general_id', $generalId)->get(),
+                'product' => $labApp ? $labApp->pcbScopes : ProductScope::where('certification_general_id', $generalId)->get(),
             ];
 
         case 'Proficiency Testing Provider':

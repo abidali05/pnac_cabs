@@ -510,6 +510,13 @@
                     'other_approvals',
                     'declaration',
                 ];
+            } elseif ($schemeName === 'Product Certification Bodies') {
+                $orderedSections = [
+                    'about_staff',
+                    'pcb_scope',
+                    'other_approvals',
+                    'declaration',
+                ];
             }
             $stepCounter = 2; // Step 1 is already used by "About Yourselves"
         @endphp
@@ -648,6 +655,8 @@
                 </div>
             @elseif ($sectionKey === 'ptp_scope')
                 @include('admin.application.proficiency_testing_provider.sections.ptp_scope')
+            @elseif ($sectionKey === 'pcb_scope')
+                @include('admin.application.product_certification_bodies.sections.pcb_scope')
             @elseif ($sectionKey === 'calibration_facility')
                 {{-- ========================================== --}}
                 {{-- Step 5: Calibration Facility (custom)      --}}

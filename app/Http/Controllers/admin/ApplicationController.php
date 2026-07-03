@@ -33,8 +33,8 @@ use App\Models\MedicalScope;
 use App\Models\MlabApplication;
 use App\Models\PersonnelCertification;
 use App\Models\PersonnelScope;
-use App\Models\ProductCertification;
 use App\Models\ProductScope;
+use App\Models\ProductCertificationScope;
 use App\Models\ProficiencyScope;
 use App\Models\PtpScope;
 use App\Models\ProficiencyTesting;
@@ -380,11 +380,13 @@ class ApplicationController extends Controller
             'other_approvals' => ! empty($labApplication->approvals_name) || ! empty($labApplication->approvals_scope),
             'declaration' => ! empty($labApplication->signed) || ! empty($labApplication->date),
             'ptp_scope' => $labApplication->ptpScopes()->exists(),
+            'pcb_scope' => $labApplication->pcbScopes()->exists(),
         ];
 
         $ptpScopes = $labApplication->ptpScopes;
+        $pcbScopes = $labApplication->pcbScopes;
 
-        return view('admin.application.certification.index', compact('cbApplication', 'cbData', 'labApplication', 'savedSections', 'scopes', 'scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries', 'form', 'ptpScopes'));
+        return view('admin.application.certification.index', compact('cbApplication', 'cbData', 'labApplication', 'savedSections', 'scopes', 'scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries', 'form', 'ptpScopes', 'pcbScopes'));
     }
 
     private function loadCbApplicationData(CbApplication $application): array
@@ -643,6 +645,30 @@ class ApplicationController extends Controller
             'application' => $request->query('application'),
         ])->with('success', 'Proficiency Testing Provider scope saved successfully.')
             ->with('open_section', 'ptp_scope');
+    }
+
+    public function savePcbScope(Request $request, ApplicationForLab $applicationForLab)
+    {
+        $validator = Validator::make($request->all(), [
+            'pcb_scope' => 'required|array',
+            'pcb_scope.*.product' => 'required|string',
+            'pcb_scope.*.standard' => 'required|string',
+            'pcb_scope.*.countries' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()->with('open_section', 'pcb_scope');
+        }
+
+        $data = $validator->validated();
+
+        $this->replaceRows('pcb_scope_of_certification', $applicationForLab->id, $data['pcb_scope']);
+
+        return redirect()->route('application.create', [
+            'scheme_name' => $request->query('scheme_name'),
+            'application' => $request->query('application'),
+        ])->with('success', 'Product Certification Body scope saved successfully.')
+            ->with('open_section', 'pcb_scope');
     }
 
     public function saveCalibrationFacility(Request $request, ApplicationForLab $applicationForLab)

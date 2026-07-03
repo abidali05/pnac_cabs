@@ -118,4 +118,9 @@ class ApplicationForLab extends Model
     {
         return $this->hasMany(PtpScope::class, 'application_id');
     }
+
+    public function pcbScopes()
+    {
+        return $this->hasMany(ProductCertificationScope::class, 'application_id');
+    }
 }
