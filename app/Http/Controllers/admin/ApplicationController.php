@@ -418,7 +418,7 @@ class ApplicationController extends Controller
         }
 
         $savedSections = [
-            'basic_info' => ! empty($application->organization_name),
+            'basic_info' => ! empty($application->application_no),
             'body_info' => ! empty(optional($data['contact'])->certification_body_name),
             'accreditation_request' => $data['requested_scopes']->isNotEmpty(),
             'documents' => $data['documents']->isNotEmpty(),

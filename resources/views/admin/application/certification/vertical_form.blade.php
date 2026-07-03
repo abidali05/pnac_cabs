@@ -531,7 +531,7 @@
 
                     @if ($editing)
                         <form method="POST"
-                            action="{{ route('application.saveCalibrationScope', ['applicationForLab' => $labApplication->id]) }}">
+                            action="{{ route('application.saveCalibrationScope', ['applicationForLab' => $labApplication->id, 'scheme_name' => request('scheme_name'), 'application' => request('application')]) }}">
                             @csrf
                             <input type="hidden" name="section" value="calibration_scope">
                             <button type="button" class="btn btn-warning btn-sm mb-3" id="addCalibrationRowBtn">

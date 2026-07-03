@@ -160,6 +160,10 @@ if (window.__cbRepeatableTableInit) {
 
                 var missing = [];
                 form.querySelectorAll("[required]").forEach(function (field) {
+                    // Skip disabled or hidden fields
+                    if (field.disabled || field.offsetParent === null || field.closest('.d-none')) {
+                        return;
+                    }
                     if (field.type === "radio") {
                         var checked = form.querySelector(
                             'input[name="' + field.name + '"]:checked',

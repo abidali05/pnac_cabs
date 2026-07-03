@@ -2240,7 +2240,7 @@
     });
 </script>
 @if (($scheme_name ?? request('scheme_name')) === 'Certification Bodies')
-    <script src="{{ asset('js/certification-bodies.js') }}"></script>
+    <script src="{{ url('admin/js/certification-bodies.js') }}?v={{ time() }}"></script>
 @endif
 
 @if (false)
