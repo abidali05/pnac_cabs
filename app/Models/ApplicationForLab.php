@@ -113,4 +113,9 @@ class ApplicationForLab extends Model
     {
         return $this->belongsTo(CertificationGeneral::class, 'certification_general_id');
     }
+
+    public function ptpScopes()
+    {
+        return $this->hasMany(PtpScope::class, 'application_id');
+    }
 }

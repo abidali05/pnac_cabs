@@ -105,8 +105,9 @@ class ScopeFetcher
             ];
 
         case 'Proficiency Testing Provider':
+            $labApp = \App\Models\ApplicationForLab::where('certification_general_id', $generalId)->first();
             return [
-                'proficiency' => ProficiencyScope::where('certification_general_id', $generalId)->get(),
+                'proficiency' => $labApp ? $labApp->ptpScopes : ProficiencyScope::where('certification_general_id', $generalId)->get(),
             ];
 
         default:

@@ -36,6 +36,7 @@ use App\Models\PersonnelScope;
 use App\Models\ProductCertification;
 use App\Models\ProductScope;
 use App\Models\ProficiencyScope;
+use App\Models\PtpScope;
 use App\Models\ProficiencyTesting;
 use App\Models\Scheme;
 use App\Models\SubCategory22000;
@@ -378,9 +379,12 @@ class ApplicationController extends Controller
             'calibration_facility' => ! empty($labApplication->calibration_fully) || ! empty($labApplication->calibration_compliance),
             'other_approvals' => ! empty($labApplication->approvals_name) || ! empty($labApplication->approvals_scope),
             'declaration' => ! empty($labApplication->signed) || ! empty($labApplication->date),
+            'ptp_scope' => $labApplication->ptpScopes()->exists(),
         ];
 
-        return view('admin.application.certification.index', compact('cbApplication', 'cbData', 'labApplication', 'savedSections', 'scopes', 'scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries', 'form'));
+        $ptpScopes = $labApplication->ptpScopes;
+
+        return view('admin.application.certification.index', compact('cbApplication', 'cbData', 'labApplication', 'savedSections', 'scopes', 'scheme_name', 'application', 'documents', 'general', 'employees', 'documentDetails', 'declaration', 'isSubmitted', 'technicalClusters', 'mainTechnical13485s', 'clusters22000', 'categories', 'subCategories', 'referenceNumber', 'countries', 'form', 'ptpScopes'));
     }
 
     private function loadCbApplicationData(CbApplication $application): array
@@ -615,6 +619,30 @@ class ApplicationController extends Controller
         $applicationForLab->update($validator->validated());
 
         return redirect()->route('application.create', ['scheme_name' => $request->query('scheme_name'), 'application' => $request->query('application')])->with('success', 'Testing scope saved successfully.')->with('open_section', 'testing_scope');
+    }
+
+    public function savePtpScope(Request $request, ApplicationForLab $applicationForLab)
+    {
+        $validator = Validator::make($request->all(), [
+            'ptp_scope' => 'required|array',
+            'ptp_scope.*.item_material_matrix_product' => 'required|string',
+            'ptp_scope.*.scheme_test_properties' => 'required|string',
+            'ptp_scope.*.protocol_procedure_technique' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()->with('open_section', 'ptp_scope');
+        }
+
+        $data = $validator->validated();
+
+        $this->replaceRows('ptp_scope_of_proficiency_testing', $applicationForLab->id, $data['ptp_scope']);
+
+        return redirect()->route('application.create', [
+            'scheme_name' => $request->query('scheme_name'),
+            'application' => $request->query('application'),
+        ])->with('success', 'Proficiency Testing Provider scope saved successfully.')
+            ->with('open_section', 'ptp_scope');
     }
 
     public function saveCalibrationFacility(Request $request, ApplicationForLab $applicationForLab)

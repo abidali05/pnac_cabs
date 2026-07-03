@@ -503,6 +503,13 @@
                 $orderedSections = array_values(array_diff($orderedSections, ['testing_scope']));
             } elseif ($schemeName === 'Testing') {
                 $orderedSections = array_values(array_diff($orderedSections, ['calibration_scope', 'calibration_facility']));
+            } elseif ($schemeName === 'Proficiency Testing Provider') {
+                $orderedSections = [
+                    'about_staff',
+                    'ptp_scope',
+                    'other_approvals',
+                    'declaration',
+                ];
             }
             $stepCounter = 2; // Step 1 is already used by "About Yourselves"
         @endphp
@@ -639,6 +646,8 @@
                         </div>
                     @endif
                 </div>
+            @elseif ($sectionKey === 'ptp_scope')
+                @include('admin.application.proficiency_testing_provider.sections.ptp_scope')
             @elseif ($sectionKey === 'calibration_facility')
                 {{-- ========================================== --}}
                 {{-- Step 5: Calibration Facility (custom)      --}}
