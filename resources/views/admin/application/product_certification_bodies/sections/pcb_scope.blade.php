@@ -4,7 +4,7 @@
 
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
         <div>
-            <h5 class="mb-1">Step {{ $stepNumber }}: Scope of Product Certification Body (PCB)</h5>
+            <h5 class="mb-1">Step {{ $stepNumber }}: {{ $pcbScopeSection['title'] }}</h5>
             <p class="text-muted mb-0">Products, standards, and countries where certificates are to be issued.</p>
         </div>
         <span class="badge {{ $saved ? 'bg-success' : 'bg-warning text-dark' }}">

@@ -57,6 +57,12 @@
             ],
         ];
 
+        // Build a section-title lookup by matching section index from JSON.
+        // For PTP / PCB / Personnel the JSON has 6 sections (indices 0-5):
+        //   0 = Basic Info, 1 = About Yourselves, 2 = About Your Staff,
+        //   3 = Scope (scheme-specific), 4 = Other Approvals, 5 = Declaration
+        // For Calibration / Testing the default titles are used (no JSON yet).
+
         $aboutYourselfSection = [
             'title' => $getSectionTitle(1, 'About Yourselves'),
         ];
@@ -70,23 +76,31 @@
         ];
 
         $testingScopeSection = [
-            'title' => $getSectionTitle(4, 'Scope of Application - Testing'),
+            'title' => $getSectionTitle(3, 'Scope of Application - Testing'),
+        ];
+
+        $ptpScopeSection = [
+            'title' => $getSectionTitle(3, 'Scope of Proficiency Testing Provider'),
+        ];
+
+        $pcbScopeSection = [
+            'title' => $getSectionTitle(3, 'Scope of Product Certification Body (PCB)'),
         ];
 
         $personnelScopeSection = [
-            'title' => $getSectionTitle(4, 'Scope of Personnel Certification – Categories'),
+            'title' => $getSectionTitle(3, 'Scope of Personnel Certification – Categories'),
         ];
 
         $calibFacilitySection = [
-            'title' => $getSectionTitle(5, 'Calibration Facility'),
+            'title' => $getSectionTitle(4, 'Calibration Facility'),
         ];
 
         $otherApprovalsSection = [
-            'title' => $getSectionTitle(6, 'Other Approvals'),
+            'title' => $getSectionTitle(4, 'Other Approvals'),
         ];
 
         $declarationSection = [
-            'title' => $getSectionTitle(7, 'Declaration'),
+            'title' => $getSectionTitle(5, 'Declaration'),
         ];
     @endphp
     {{-- @php
@@ -139,9 +153,9 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-4"><label class="form-label">CAB Name</label><input
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(0, 1, 'CAB Name') }}</label><input
                                 class="form-control @error('cab_name') is-invalid @enderror" name="cab_name"
-                                data-label="CAB Name" data-error="Please enter CAB name." required maxlength="255"
+                                data-label="{{ $getFieldLabel(0, 1, 'CAB Name') }}" data-error="Please enter CAB name." required maxlength="255"
                                 placeholder="Enter CAB name"
                                 value="{{ old('cab_name', $labApplication->certificationGeneral?->cab_name) }}"><small
                                 class="field-error text-danger" data-error-for="cab_name">
@@ -149,9 +163,9 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-4"><label class="form-label">Address of Laboratory</label>
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(0, 2, 'Address of Laboratory') }}</label>
                             <textarea class="form-control @error('address_laboratory') is-invalid @enderror" name="address_laboratory"
-                                data-label="Laboratory Address" data-error="Please enter laboratory address." required maxlength="1000"
+                                data-label="{{ $getFieldLabel(0, 2, 'Address of Laboratory') }}" data-error="Please enter laboratory address." required maxlength="1000"
                                 rows="2" placeholder="Enter complete laboratory address">{{ old('address_laboratory', $labApplication->certificationGeneral?->address) }}</textarea><small class="field-error text-danger"
                                 data-error-for="address_laboratory">
                                 @error('address_laboratory')
@@ -159,9 +173,9 @@
                                 @enderror
                             </small>
                         </div>
-                        <div class="col-md-4"><label class="form-label">Telephone</label><input type="tel"
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(0, 3, 'Telephone') }}</label><input type="tel"
                                 class="form-control @error('tel') is-invalid @enderror" name="tel"
-                                data-label="Telephone" data-error="Please enter telephone number."
+                                data-label="{{ $getFieldLabel(0, 3, 'Telephone') }}" data-error="Please enter telephone number."
                                 data-error-type="Please enter a valid telephone number." pattern="^[0-9+\-\s]+$"
                                 required minlength="7" maxlength="30" placeholder="e.g. +92-300-1234567"
                                 value="{{ old('tel', $labApplication->certificationGeneral?->telephone) }}"><small
@@ -170,9 +184,9 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-4"><label class="form-label">Email</label><input type="email"
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(0, 4, 'Email') }}</label><input type="email"
                                 class="form-control @error('person_email') is-invalid @enderror" name="person_email"
-                                data-label="Email" data-error="Please enter email address."
+                                data-label="{{ $getFieldLabel(0, 4, 'Email') }}" data-error="Please enter email address."
                                 data-error-type="Please enter a valid email address." required maxlength="255"
                                 placeholder="e.g. info@example.com"
                                 value="{{ old('person_email', $labApplication->certificationGeneral?->email) }}"><small
@@ -181,9 +195,9 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-4"><label class="form-label">NTN/FTN</label><input
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(0, 5, 'NTN/FTN') }}</label><input
                                 class="form-control @error('ntn_ftn') is-invalid @enderror" name="ntn_ftn"
-                                data-label="NTN/FTN" data-error="Please enter NTN/FTN." pattern="^[A-Za-z0-9\\-/]+$"
+                                data-label="{{ $getFieldLabel(0, 5, 'NTN/FTN') }}" data-error="Please enter NTN/FTN." pattern="^[A-Za-z0-9\\-/]+$"
                                 required maxlength="100" placeholder="Enter NTN/FTN number"
                                 value="{{ old('ntn_ftn', $labApplication->certificationGeneral?->ntn_ftn) }}"><small
                                 class="field-error text-danger" data-error-for="ntn_ftn">
@@ -191,9 +205,9 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-4"><label class="form-label">Website</label><input type="url"
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(0, 6, 'Website') }}</label><input type="url"
                                 class="form-control @error('website') is-invalid @enderror" name="website"
-                                data-label="Website" data-error="Please enter website URL."
+                                data-label="{{ $getFieldLabel(0, 6, 'Website') }}" data-error="Please enter website URL."
                                 data-error-type="Please enter a valid website URL." required maxlength="255"
                                 placeholder="e.g. https://example.com"
                                 value="{{ old('website', $labApplication->certificationGeneral?->website) }}"><small
@@ -202,9 +216,9 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-4"><label class="form-label">City</label><input
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(0, 7, 'City') }}</label><input
                                 class="form-control @error('city') is-invalid @enderror" name="city"
-                                data-label="City" data-error="Please enter city." required maxlength="255"
+                                data-label="{{ $getFieldLabel(0, 7, 'City') }}" data-error="Please enter city." required maxlength="255"
                                 placeholder="Enter city"
                                 value="{{ old('city', $labApplication->certificationGeneral?->city) }}"><small
                                 class="field-error text-danger" data-error-for="city">
@@ -212,9 +226,9 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-4"><label class="form-label">Country</label><input
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(0, 8, 'Country') }}</label><input
                                 class="form-control @error('country') is-invalid @enderror" name="country"
-                                data-label="Country" data-error="Please enter country." required maxlength="255"
+                                data-label="{{ $getFieldLabel(0, 8, 'Country') }}" data-error="Please enter country." required maxlength="255"
                                 placeholder="Enter country"
                                 value="{{ old('country', $labApplication->certificationGeneral?->country) }}"><small
                                 class="field-error text-danger" data-error-for="country">
@@ -222,9 +236,9 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-4"><label class="form-label">Postal Code</label><input
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(0, 9, 'Postal Code') }}</label><input
                                 class="form-control @error('postcode') is-invalid @enderror" name="postcode"
-                                data-label="Postal Code" data-error="Please enter postal code."
+                                data-label="{{ $getFieldLabel(0, 9, 'Postal Code') }}" data-error="Please enter postal code."
                                 pattern="^[A-Za-z0-9\\s-]+$" required maxlength="20" placeholder="Enter postal code"
                                 value="{{ old('postcode', $labApplication->certificationGeneral?->postal_code) }}"><small
                                 class="field-error text-danger" data-error-for="postcode">
@@ -311,7 +325,7 @@
                     @csrf
                     <input type="hidden" name="section" value="about_yourself">
                     <div class="row g-3">
-                        <div class="col-md-4"><label class="form-label">Title</label><input
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(1, 0, 'Title') }}</label><input
                                 class="form-control @error('selves_title') is-invalid @enderror" name="selves_title"
                                 required maxlength="100" placeholder="Mr / Ms / Dr"
                                 value="{{ old('selves_title', $labApplication->selves_title) }}"><small
@@ -320,7 +334,7 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-4"><label class="form-label">Name</label><input
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(1, 1, 'Name') }}</label><input
                                 class="form-control @error('selves_name') is-invalid @enderror" name="selves_name"
                                 required maxlength="255" placeholder="Enter full name"
                                 value="{{ old('selves_name', $labApplication->selves_name) }}"><small
@@ -329,7 +343,7 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-4"><label class="form-label">Position</label><input
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(1, 2, 'Position') }}</label><input
                                 class="form-control @error('selves_position') is-invalid @enderror"
                                 name="selves_position" required maxlength="255"
                                 placeholder="Enter position/designation"
@@ -339,7 +353,7 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-6"><label class="form-label">Parent Organization</label><input
+                        <div class="col-md-6"><label class="form-label">{{ $getFieldLabel(1, 3, 'Parent Organization') }}</label><input
                                 class="form-control @error('selves_parent_organization') is-invalid @enderror"
                                 name="selves_parent_organization" required maxlength="255"
                                 placeholder="Enter parent organization"
@@ -349,7 +363,7 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-6"><label class="form-label">Relationship</label><input
+                        <div class="col-md-6"><label class="form-label">{{ $getFieldLabel(1, 4, 'Relationship') }}</label><input
                                 class="form-control @error('selves_relationship') is-invalid @enderror"
                                 name="selves_relationship" required maxlength="255"
                                 placeholder="Describe relationship with parent organization"
@@ -359,7 +373,7 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-12"><label class="form-label">Address</label>
+                        <div class="col-12"><label class="form-label">{{ $getFieldLabel(1, 5, 'Address') }}</label>
                             <textarea class="form-control @error('selves_address') is-invalid @enderror" name="selves_address" required
                                 rows="2" placeholder="Enter address">{{ old('selves_address', $labApplication->selves_address) }}</textarea><small class="field-error text-danger">
                                 @error('selves_address')
@@ -367,7 +381,7 @@
                                 @enderror
                             </small>
                         </div>
-                        <div class="col-md-4"><label class="form-label">Postcode</label><input
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(1, 6, 'Postcode') }}</label><input
                                 class="form-control @error('selves_postcode') is-invalid @enderror"
                                 name="selves_postcode" required maxlength="100" placeholder="Enter postcode"
                                 value="{{ old('selves_postcode', $labApplication->selves_postcode) }}"><small
@@ -376,7 +390,7 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-4"><label class="form-label">Telephone</label><input type="tel"
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(1, 7, 'Telephone') }}</label><input type="tel"
                                 class="form-control @error('selves_tel') is-invalid @enderror" name="selves_tel"
                                 pattern="^[0-9+\\-\\s]+$" required maxlength="100" placeholder="e.g. +92-300-1234567"
                                 value="{{ old('selves_tel', $labApplication->selves_tel) }}"><small
@@ -385,7 +399,7 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-4"><label class="form-label">Fax</label><input type="tel"
+                        <div class="col-md-4"><label class="form-label">{{ $getFieldLabel(1, 8, 'Fax') }}</label><input type="tel"
                                 class="form-control @error('selves_fax') is-invalid @enderror" name="selves_fax"
                                 pattern="^[0-9+\\-\\s]+$" required maxlength="100" placeholder="Enter fax number"
                                 value="{{ old('selves_fax', $labApplication->selves_fax) }}"><small
@@ -395,7 +409,7 @@
                                 @enderror
                             </small></div>
                         <div class="col-12">
-                            <label class="form-label">Ownership Type</label>
+                            <label class="form-label">{{ $getFieldLabel(1, 9, 'Ownership Type') }}</label>
                             <select class="form-select" name="ownership_type">
                                 <option value="">Select</option>
                                 <option value="Owned by an individual" @selected(old('ownership_type', $isOwnershipSelected('selves_individual') ? 'Owned by an individual' : '') === 'Owned by an individual')>Owned by an
@@ -413,7 +427,7 @@
                                 <option value="Other">Other</option>
                             </select>
                         </div>
-                        <div class="col-12"><label class="form-label">Other ownership description</label>
+                        <div class="col-12"><label class="form-label">{{ $getFieldLabel(1, 10, 'Other ownership description') }}</label>
                             <textarea class="form-control @error('selves_other_describe') is-invalid @enderror" name="selves_other_describe"
                                 required rows="2" placeholder="If Other, please describe">{{ old('selves_other_describe', $labApplication->selves_other_describe) }}</textarea><small class="field-error text-danger">
                                 @error('selves_other_describe')
@@ -421,7 +435,7 @@
                                 @enderror
                             </small>
                         </div>
-                        <div class="col-md-6"><label class="form-label">Parent Main Activity</label><select
+                        <div class="col-md-6"><label class="form-label">{{ $getFieldLabel(1, 11, 'Parent Main Activity') }}</label><select
                                 class="form-select @error('parent_main_activity') is-invalid @enderror"
                                 name="parent_main_activity" required>
                                 <option value="">Select main activity</option>
@@ -432,7 +446,7 @@
                                     {{ $message }}
                                 @enderror
                             </small></div>
-                        <div class="col-md-6"><label class="form-label">Activities Description</label>
+                        <div class="col-md-6"><label class="form-label">{{ $getFieldLabel(1, 12, 'Activities Description') }}</label>
                             <textarea class="form-control @error('selves_activities') is-invalid @enderror" name="selves_activities" required
                                 rows="2" placeholder="Describe activities">{{ old('selves_activities', $labApplication->selves_activities) }}</textarea><small class="field-error text-danger">
                                 @error('selves_activities')
@@ -469,12 +483,12 @@
                     'title' => $aboutStaffSection['title'],
                     'subtitle' => 'Technical management and quality manager details.',
                     'fields' => [
-                        ['staff_name', 'Staff Name'],
-                        ['staff_qualifications', 'Qualifications'],
-                        ['staff_experience', 'Relevant Experience'],
-                        ['staff_quality_name', 'Quality Manager Name'],
-                        ['staff_quality_qualifications', 'Quality Manager Qualifications'],
-                        ['staff_quality_experience', 'Quality Manager Experience'],
+                        ['staff_name',                 $getFieldLabel(2, 0, 'Staff Name')],
+                        ['staff_qualifications',       $getFieldLabel(2, 1, 'Qualifications')],
+                        ['staff_experience',           $getFieldLabel(2, 2, 'Relevant Experience')],
+                        ['staff_quality_name',         $getFieldLabel(2, 3, 'Quality Manager Name')],
+                        ['staff_quality_qualifications',$getFieldLabel(2, 4, 'Quality Manager Qualifications')],
+                        ['staff_quality_experience',   $getFieldLabel(2, 5, 'Quality Manager Experience')],
                     ],
                     'route' => 'application.saveAboutStaff',
                 ],
@@ -482,15 +496,15 @@
                     'title' => $testingScopeSection['title'],
                     'subtitle' => 'Testing scope and major equipment records.',
                     'fields' => [
-                        ['scop_materials', 'Materials / Products Tested'],
-                        ['scop_types', 'Types of Test'],
-                        ['scop_range', 'Range'],
-                        ['scop_detection', 'Minimum Detection Limit'],
-                        ['scop_uncertainty', 'Uncertainty'],
-                        ['scop_standard', 'Standard / Techniques'],
-                        ['scop_description', 'Equipment Description'],
-                        ['scop_working', 'Working Range'],
-                        ['scop_limit', 'Limit'],
+                        ['scop_materials',  $getFieldLabel(3, 0, 'Materials / Products Tested')],
+                        ['scop_types',      $getFieldLabel(3, 1, 'Types of Test')],
+                        ['scop_range',      $getFieldLabel(3, 2, 'Range')],
+                        ['scop_detection',  $getFieldLabel(3, 3, 'Minimum Detection Limit')],
+                        ['scop_uncertainty',$getFieldLabel(3, 4, 'Uncertainty')],
+                        ['scop_standard',   $getFieldLabel(3, 5, 'Standard / Techniques')],
+                        ['scop_description',$getFieldLabel(3, 6, 'Equipment Description')],
+                        ['scop_working',    $getFieldLabel(3, 7, 'Working Range')],
+                        ['scop_limit',      $getFieldLabel(3, 8, 'Limit')],
                     ],
                     'route' => 'application.saveTestingScope',
                 ],
@@ -498,10 +512,10 @@
                     'title' => $otherApprovalsSection['title'],
                     'subtitle' => 'Current approvals and validity.',
                     'fields' => [
-                        ['approvals_name', 'Approval Body Name'],
-                        ['approvals_scope', 'Scope'],
-                        ['approvals_start_date', 'Start Date'],
-                        ['approvals_end_date', 'Expiry Date'],
+                        ['approvals_name',       $getFieldLabel(4, 0, 'Approval Body Name')],
+                        ['approvals_scope',      $getFieldLabel(4, 1, 'Scope')],
+                        ['approvals_start_date', $getFieldLabel(4, 2, 'Start Date')],
+                        ['approvals_end_date',   $getFieldLabel(4, 3, 'Expiry Date')],
                     ],
                     'route' => 'application.saveOtherApprovals',
                 ],
@@ -964,7 +978,7 @@
                                             <input class="form-check-input" type="checkbox"
                                                 name="declaration_calibration" value="yes" id="decl_calibration"
                                                 @if (old('declaration_calibration', $labApplication->declaration_calibration) === 'yes') checked @endif>
-                                            <label class="form-check-label" for="decl_calibration">Calibration</label>
+                                            <label class="form-check-label" for="decl_calibration">{{ $getFieldLabel(5, 0, 'Calibration') }}</label>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
@@ -972,7 +986,7 @@
                                             <input class="form-check-input" type="checkbox"
                                                 name="declaration_testing" value="yes" id="decl_testing"
                                                 @if (old('declaration_testing', $labApplication->declaration_testing) === 'yes') checked @endif>
-                                            <label class="form-check-label" for="decl_testing">Testing</label>
+                                            <label class="form-check-label" for="decl_testing">{{ $getFieldLabel(5, 1, 'Testing') }}</label>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
@@ -980,8 +994,7 @@
                                             <input class="form-check-input" type="checkbox"
                                                 name="declaration_extension" value="yes" id="decl_extension"
                                                 @if (old('declaration_extension', $labApplication->declaration_extension) === 'yes') checked @endif>
-                                            <label class="form-check-label" for="decl_extension">An extension in scope
-                                                of existing accreditation for a:</label>
+                                            <label class="form-check-label" for="decl_extension">{{ $getFieldLabel(5, 2, 'An extension in scope of existing accreditation for a:') }}</label>
                                         </div>
                                     </div>
                                 </div>
@@ -991,8 +1004,7 @@
                                             <input class="form-check-input" type="checkbox"
                                                 name="declaration_laboratory" value="yes" id="decl_lab"
                                                 @if (old('declaration_laboratory', $labApplication->declaration_laboratory) === 'yes') checked @endif>
-                                            <label class="form-check-label" for="decl_lab">Calibration
-                                                laboratory</label>
+                                            <label class="form-check-label" for="decl_lab">{{ $getFieldLabel(5, 3, 'Calibration laboratory') }}</label>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
@@ -1000,8 +1012,7 @@
                                             <input class="form-check-input" type="checkbox"
                                                 name="declaration_test_lab" value="yes" id="decl_test_lab"
                                                 @if (old('declaration_test_lab', $labApplication->declaration_test_lab) === 'yes') checked @endif>
-                                            <label class="form-check-label" for="decl_test_lab">Testing
-                                                Laboratory</label>
+                                            <label class="form-check-label" for="decl_test_lab">{{ $getFieldLabel(5, 4, 'Testing Laboratory') }}</label>
                                         </div>
                                     </div>
                                 </div>
@@ -1027,13 +1038,13 @@
                             {{-- Signed and Date --}}
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Signed</label>
+                                    <label class="form-label fw-semibold">{{ $getFieldLabel(5, 6, 'Signed') }}</label>
                                     <input type="text" name="signed" class="form-control"
                                         value="{{ old('signed', $labApplication->signed) }}"
                                         placeholder="Name of signatory">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Date</label>
+                                    <label class="form-label fw-semibold">{{ $getFieldLabel(5, 7, 'Date') }}</label>
                                     <input type="date" name="date" class="form-control"
                                         value="{{ old('date', $labApplication->date) }}">
                                 </div>
@@ -1229,11 +1240,16 @@
             if (el.classList.contains('ckeditor-initialized')) {
                 return;
             }
+            // Capture the existing content BEFORE CKEditor replaces the element
+            const existingContent = el.value || el.innerHTML || '';
             ClassicEditor.create(el)
                 .then(editor => {
                     el.classList.add('ckeditor-initialized');
                     el.ckeditorInstance = editor;
-                    console.log('CKEditor initialized for', el);
+                    // Restore the existing content so edit mode shows saved data
+                    if (existingContent.trim() !== '') {
+                        editor.setData(existingContent);
+                    }
                 })
                 .catch(error => {
                     console.error('CKEditor creation error:', error);

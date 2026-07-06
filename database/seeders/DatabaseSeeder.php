@@ -13,5 +13,8 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(TestingApplicationFormSeeder::class);
+        $this->call(ProficiencyTestProviderFormSeeder::class);
+        $this->call(ProductCertificationBodiesFormSeeder::class);
+        $this->call(PersonnelCertificationBodiesFormSeeder::class);
     }
 }

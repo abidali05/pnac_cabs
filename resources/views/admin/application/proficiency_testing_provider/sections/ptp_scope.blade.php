@@ -4,7 +4,7 @@
 
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
         <div>
-            <h5 class="mb-1">Step {{ $stepNumber }}: Scope of Proficiency Testing Provider</h5>
+            <h5 class="mb-1">Step {{ $stepNumber }}: {{ $ptpScopeSection['title'] }}</h5>
             <p class="text-muted mb-0">Items, schemes, and protocols/techniques.</p>
         </div>
         <span class="badge {{ $saved ? 'bg-success' : 'bg-warning text-dark' }}">
