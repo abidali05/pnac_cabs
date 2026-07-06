@@ -257,7 +257,7 @@
                                     <p class="card-text">
                                         <img src="{{ asset('images/iso.png') }}" width="100px" class="rounded-circle" alt="ISO 9001">
                                     </p>
-                                    <a href="{{ route('application.view.scope', ['category' => 'Inspection Bodies', 'scope' => 'ISO9001']) }}" class="card-link btn btn-warning ">View ISO 9001:2025</a>
+                                    <a href="{{ route('application.view.scope', ['category' => 'Product Certification Bodies', 'scope' => 'ISO9001']) }}" class="card-link btn btn-warning ">View ISO 9001:2025</a>
                                 </div>
                             </div>
                         </div>
@@ -269,7 +269,7 @@
                                     <p class="card-text">
                                         <img src="{{ asset('images/iso.png') }}" width="100px" class="rounded-circle" alt="ISO 14001">
                                     </p>
-                                    <a href="{{ route('application.view.scope', ['category' => 'Inspection Bodies', 'scope' => 'ISO14001']) }}" class="card-link btn btn-warning px-4">View ISO 14001</a>
+                                    <a href="{{ route('application.view.scope', ['category' => 'Product Certification Bodies', 'scope' => 'ISO14001']) }}" class="card-link btn btn-warning px-4">View ISO 14001</a>
                                 </div>
                             </div>
                         </div>
@@ -282,7 +282,7 @@
                                     <p class="card-text">
                                         <img src="{{ asset('images/iso.png') }}" width="100px" class="rounded-circle" alt="ISO 45001">
                                     </p>
-                                    <a href="{{ route('application.view.scope', ['category' => 'Inspection Bodies', 'scope' => 'ISO45001']) }}" class="card-link btn btn-warning px-4">View ISO 45001</a>
+                                    <a href="{{ route('application.view.scope', ['category' => 'Product Certification Bodies', 'scope' => 'ISO45001']) }}" class="card-link btn btn-warning px-4">View ISO 45001</a>
                                 </div>
                             </div>
                         </div>
@@ -295,7 +295,7 @@
                                     <p class="card-text">
                                         <img src="{{ asset('images/iso.png') }}" width="100px" class="rounded-circle" alt="ISO 13485">
                                     </p>
-                                    <a href="{{ route('application.view.scope', ['category' => 'Inspection Bodies', 'scope' => 'ISO13485']) }}" class="card-link btn btn-warning px-4">View ISO 13485</a>
+                                    <a href="{{ route('application.view.scope', ['category' => 'Product Certification Bodies', 'scope' => 'ISO13485']) }}" class="card-link btn btn-warning px-4">View ISO 13485</a>
                                 </div>
                             </div>
                         </div>
@@ -308,7 +308,7 @@
                                     <p class="card-text">
                                         <img src="{{ asset('images/iso.png') }}" width="100px" class="rounded-circle" alt="ISO 22000">
                                     </p>
-                                    <a href="{{ route('application.view.scope', ['category' => 'Inspection Bodies', 'scope' => 'ISO22000']) }}" class="card-link btn btn-warning px-4">View ISO 22000</a>
+                                    <a href="{{ route('application.view.scope', ['category' => 'Product Certification Bodies', 'scope' => 'ISO22000']) }}" class="card-link btn btn-warning px-4">View ISO 22000</a>
                                 </div>
                             </div>
                         </div>
@@ -331,36 +331,44 @@
                         <div class="card-body">
                             <div class="form-group">
                                 <p>
-                                    6.2. The CB/organisation agrees to conform, upon accreditation, with PNAC requirements as detailed in the Agreement [F-01/08].
+                                    6.1 	The Product Certification Body applies for accreditation by PNAC as (please tick appropriate boxes)
                                 </p>
                             </div>
                             <div class="form-group">
                                 <p>
-                                    6.3. I enclose a copy of Quality Manual and other documents/information (see Note below)
-                                </p>
-                            </div>
-                            <div class="form-group">
-                                <p>6.4. I enclose a cheque (payable to PNAC) for the Applicant fee of <input type="text" name="application_fee" value="{{ $declaration->application_fee ?? '' }}" style="outline: none;"> I understand that this fee is non-refundable. (see Note below).</p>
-                            </div>
-                            <div class="form-group">
-                                <p>6.5. I understand the manner in which the accreditation system functions.
+                                    6.2. 	The PCB/organisation agrees to conform, upon accreditation, PNAC requirements as detailed in the Agreement [F-01/08].
                                 </p>
                             </div>
                             <div class="form-group">
                                 <p>
-                                    I declare that the information given in this form is correct to the best of my knowledge and belief
+                                    6.3. 	I enclose a copy of Quality Manual and other documents/information (see Note below)
                                 </p>
                             </div>
                             <div class="form-group">
                                 <p>
-                                    <b>Note:</b> PNAC will not process your application until it has received your Quality Manual, procedures, other documents/information and application fee.
+                                    6.4. 	I enclose a cheque (payable to PNAC) as Application fee amounting Rs. <input type="text" name="application_fee" value="{{ $declaration->application_fee ?? '' }}" style="outline: none;">. I understand that this fee is non-refundable. (see Note below).
+                                </p>
+                            </div>
+                            <div class="form-group">
+                                <p>
+                                    6.5. 	I understand manner in which the accreditation system functions.
+                                </p>
+                            </div>
+                            <div class="form-group">
+                                <p>
+                                    6.6. 	I declare that the information given in this form is correct to the best of my knowledge and belief
+                                </p>
+                            </div>
+                            <div class="form-group">
+                                <p>
+                                    <b>Note:</b> PNAC will not process any application until it has received specified required documents like Quality Manual, relevant procedures, documents/information and application fee.
                                 </p>
                             </div>
 
-                            <!--<div class="footer mb-5 pb-3">-->
-                            <!--    <button class="btn btn-secondary prev-btn" type="button">Previous</button>-->
-                            <!--    <button type="submit" class="btn btn-success">Final Submition</button>-->
-                            <!--</div>-->
+                            <div class="footer mb-5 pb-3">
+                                <button class="btn btn-secondary prev-btn" type="button">Previous</button>
+                                <button type="submit" class="btn btn-success">Final Submition</button>
+                            </div>
                         </div>
                     </form>
                 </div>

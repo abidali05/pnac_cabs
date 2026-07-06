@@ -257,7 +257,7 @@
                                     <p class="card-text">
                                         <img src="{{ asset('images/iso.png') }}" width="100px" class="rounded-circle" alt="ISO 9001">
                                     </p>
-                                    <a href="{{ route('application.view.scope', ['category' => 'Inspection Bodies', 'scope' => 'ISO9001']) }}" class="card-link btn btn-warning ">View ISO 9001:2025</a>
+                                    <a href="{{ route('application.view.scope', ['category' => 'Halal Certification Bodies', 'scope' => 'ISO9001']) }}" class="card-link btn btn-warning ">View ISO 9001:2025</a>
                                 </div>
                             </div>
                         </div>
@@ -269,7 +269,7 @@
                                     <p class="card-text">
                                         <img src="{{ asset('images/iso.png') }}" width="100px" class="rounded-circle" alt="ISO 14001">
                                     </p>
-                                    <a href="{{ route('application.view.scope', ['category' => 'Inspection Bodies', 'scope' => 'ISO14001']) }}" class="card-link btn btn-warning px-4">View ISO 14001</a>
+                                    <a href="{{ route('application.view.scope', ['category' => 'Halal Certification Bodies', 'scope' => 'ISO14001']) }}" class="card-link btn btn-warning px-4">View ISO 14001</a>
                                 </div>
                             </div>
                         </div>
@@ -282,7 +282,7 @@
                                     <p class="card-text">
                                         <img src="{{ asset('images/iso.png') }}" width="100px" class="rounded-circle" alt="ISO 45001">
                                     </p>
-                                    <a href="{{ route('application.view.scope', ['category' => 'Inspection Bodies', 'scope' => 'ISO45001']) }}" class="card-link btn btn-warning px-4">View ISO 45001</a>
+                                    <a href="{{ route('application.view.scope', ['category' => 'Halal Certification Bodies', 'scope' => 'ISO45001']) }}" class="card-link btn btn-warning px-4">View ISO 45001</a>
                                 </div>
                             </div>
                         </div>
@@ -295,7 +295,7 @@
                                     <p class="card-text">
                                         <img src="{{ asset('images/iso.png') }}" width="100px" class="rounded-circle" alt="ISO 13485">
                                     </p>
-                                    <a href="{{ route('application.view.scope', ['category' => 'Inspection Bodies', 'scope' => 'ISO13485']) }}" class="card-link btn btn-warning px-4">View ISO 13485</a>
+                                    <a href="{{ route('application.view.scope', ['category' => 'Halal Certification Bodies', 'scope' => 'ISO13485']) }}" class="card-link btn btn-warning px-4">View ISO 13485</a>
                                 </div>
                             </div>
                         </div>
@@ -308,7 +308,7 @@
                                     <p class="card-text">
                                         <img src="{{ asset('images/iso.png') }}" width="100px" class="rounded-circle" alt="ISO 22000">
                                     </p>
-                                    <a href="{{ route('application.view.scope', ['category' => 'Inspection Bodies', 'scope' => 'ISO22000']) }}" class="card-link btn btn-warning px-4">View ISO 22000</a>
+                                    <a href="{{ route('application.view.scope', ['category' => 'Halal Certification Bodies', 'scope' => 'ISO22000']) }}" class="card-link btn btn-warning px-4">View ISO 22000</a>
                                 </div>
                             </div>
                         </div>
@@ -357,10 +357,10 @@
                                 </p>
                             </div>
 
-                            <!--<div class="footer mb-5 pb-3">-->
-                            <!--    <button class="btn btn-secondary prev-btn" type="button">Previous</button>-->
-                            <!--    <button type="submit" class="btn btn-success">Final Submition</button>-->
-                            <!--</div>-->
+                            <div class="footer mb-5 pb-3">
+                                <button class="btn btn-secondary prev-btn" type="button">Previous</button>
+                                <button type="submit" class="btn btn-success">Final Submition</button>
+                            </div>
                         </div>
                     </form>
                 </div>
