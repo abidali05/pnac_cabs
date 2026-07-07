@@ -58,49 +58,75 @@
         ];
 
         // Build a section-title lookup by matching section index from JSON.
-        // For PTP / PCB / Personnel the JSON has 6 sections (indices 0-5):
-        //   0 = Basic Info, 1 = About Yourselves, 2 = About Your Staff,
-        //   3 = Scope (scheme-specific), 4 = Other Approvals, 5 = Declaration
-        // For Calibration / Testing the default titles are used (no JSON yet).
+        $findSectionIndex = function(array $keywords, int $defaultIndex) use ($formSchema) {
+            if (!$formSchema || !isset($formSchema['sections'])) {
+                return $defaultIndex;
+            }
+            foreach ($formSchema['sections'] as $index => $sec) {
+                if (isset($sec['title'])) {
+                    foreach ($keywords as $keyword) {
+                        if (stripos($sec['title'], $keyword) !== false) {
+                            return $index;
+                        }
+                    }
+                }
+            }
+            return $defaultIndex;
+        };
+
+        $basicInfoIndex = $findSectionIndex(['basic', 'laboratory information'], 0);
+        $aboutYourselfIndex = $findSectionIndex(['about yourself', 'about yourselves'], 1);
+        $aboutStaffIndex = $findSectionIndex(['about your staff', 'staff information'], 2);
+        
+        $calibScopeIndex = $findSectionIndex(['scope of application - calibration', 'calibration scope'], 3);
+        $testingScopeIndex = $findSectionIndex(['scope of application - testing', 'testing scope'], 4);
+        
+        $ptpScopeIndex = $findSectionIndex(['proficiency testing provider', 'ptp'], 3);
+        $pcbScopeIndex = $findSectionIndex(['product certification', 'pcb'], 3);
+        $personnelScopeIndex = $findSectionIndex(['personnel certification', 'personnel scope'], 3);
+        
+        $calibFacilityIndex = $findSectionIndex(['calibration facility', 'facility form'], 5);
+        $otherApprovalsIndex = $findSectionIndex(['other approvals'], 6);
+        $declarationIndex = $findSectionIndex(['declaration'], 7);
 
         $aboutYourselfSection = [
-            'title' => $getSectionTitle(1, 'About Yourselves'),
+            'title' => $getSectionTitle($aboutYourselfIndex, 'About Yourselves'),
         ];
 
         $aboutStaffSection = [
-            'title' => $getSectionTitle(2, 'About Your Staff'),
+            'title' => $getSectionTitle($aboutStaffIndex, 'About Your Staff'),
         ];
 
         $calibScopeSection = [
-            'title' => $getSectionTitle(3, 'Scope of Application - Calibration'),
+            'title' => $getSectionTitle($calibScopeIndex, 'Scope of Application - Calibration'),
         ];
 
         $testingScopeSection = [
-            'title' => $getSectionTitle(3, 'Scope of Application - Testing'),
+            'title' => $getSectionTitle($testingScopeIndex, 'Scope of Application - Testing'),
         ];
 
         $ptpScopeSection = [
-            'title' => $getSectionTitle(3, 'Scope of Proficiency Testing Provider'),
+            'title' => $getSectionTitle($ptpScopeIndex, 'Scope of Proficiency Testing Provider'),
         ];
 
         $pcbScopeSection = [
-            'title' => $getSectionTitle(3, 'Scope of Product Certification Body (PCB)'),
+            'title' => $getSectionTitle($pcbScopeIndex, 'Scope of Product Certification Body (PCB)'),
         ];
 
         $personnelScopeSection = [
-            'title' => $getSectionTitle(3, 'Scope of Personnel Certification – Categories'),
+            'title' => $getSectionTitle($personnelScopeIndex, 'Scope of Personnel Certification – Categories'),
         ];
 
         $calibFacilitySection = [
-            'title' => $getSectionTitle(4, 'Calibration Facility'),
+            'title' => $getSectionTitle($calibFacilityIndex, 'Calibration Facility'),
         ];
 
         $otherApprovalsSection = [
-            'title' => $getSectionTitle(4, 'Other Approvals'),
+            'title' => $getSectionTitle($otherApprovalsIndex, 'Other Approvals'),
         ];
 
         $declarationSection = [
-            'title' => $getSectionTitle(5, 'Declaration'),
+            'title' => $getSectionTitle($declarationIndex, 'Declaration'),
         ];
     @endphp
     {{-- @php
@@ -483,12 +509,12 @@
                     'title' => $aboutStaffSection['title'],
                     'subtitle' => 'Technical management and quality manager details.',
                     'fields' => [
-                        ['staff_name',                 $getFieldLabel(2, 0, 'Staff Name')],
-                        ['staff_qualifications',       $getFieldLabel(2, 1, 'Qualifications')],
-                        ['staff_experience',           $getFieldLabel(2, 2, 'Relevant Experience')],
-                        ['staff_quality_name',         $getFieldLabel(2, 3, 'Quality Manager Name')],
-                        ['staff_quality_qualifications',$getFieldLabel(2, 4, 'Quality Manager Qualifications')],
-                        ['staff_quality_experience',   $getFieldLabel(2, 5, 'Quality Manager Experience')],
+                        ['staff_name',                 $getFieldLabel($aboutStaffIndex, 0, 'Staff Name')],
+                        ['staff_qualifications',       $getFieldLabel($aboutStaffIndex, 1, 'Qualifications')],
+                        ['staff_experience',           $getFieldLabel($aboutStaffIndex, 2, 'Relevant Experience')],
+                        ['staff_quality_name',         $getFieldLabel($aboutStaffIndex, 3, 'Quality Manager Name')],
+                        ['staff_quality_qualifications',$getFieldLabel($aboutStaffIndex, 4, 'Quality Manager Qualifications')],
+                        ['staff_quality_experience',   $getFieldLabel($aboutStaffIndex, 5, 'Quality Manager Experience')],
                     ],
                     'route' => 'application.saveAboutStaff',
                 ],
@@ -496,15 +522,15 @@
                     'title' => $testingScopeSection['title'],
                     'subtitle' => 'Testing scope and major equipment records.',
                     'fields' => [
-                        ['scop_materials',  $getFieldLabel(3, 0, 'Materials / Products Tested')],
-                        ['scop_types',      $getFieldLabel(3, 1, 'Types of Test')],
-                        ['scop_range',      $getFieldLabel(3, 2, 'Range')],
-                        ['scop_detection',  $getFieldLabel(3, 3, 'Minimum Detection Limit')],
-                        ['scop_uncertainty',$getFieldLabel(3, 4, 'Uncertainty')],
-                        ['scop_standard',   $getFieldLabel(3, 5, 'Standard / Techniques')],
-                        ['scop_description',$getFieldLabel(3, 6, 'Equipment Description')],
-                        ['scop_working',    $getFieldLabel(3, 7, 'Working Range')],
-                        ['scop_limit',      $getFieldLabel(3, 8, 'Limit')],
+                        ['scop_materials',  $getFieldLabel($testingScopeIndex, 0, 'Materials / Products Tested')],
+                        ['scop_types',      $getFieldLabel($testingScopeIndex, 1, 'Types of Test')],
+                        ['scop_range',      $getFieldLabel($testingScopeIndex, 2, 'Range')],
+                        ['scop_detection',  $getFieldLabel($testingScopeIndex, 3, 'Minimum Detection Limit')],
+                        ['scop_uncertainty',$getFieldLabel($testingScopeIndex, 4, 'Uncertainty')],
+                        ['scop_standard',   $getFieldLabel($testingScopeIndex, 5, 'Standard / Techniques')],
+                        ['scop_description',$getFieldLabel($testingScopeIndex, 6, 'Equipment Description')],
+                        ['scop_working',    $getFieldLabel($testingScopeIndex, 7, 'Working Range')],
+                        ['scop_limit',      $getFieldLabel($testingScopeIndex, 8, 'Limit')],
                     ],
                     'route' => 'application.saveTestingScope',
                 ],
@@ -512,10 +538,10 @@
                     'title' => $otherApprovalsSection['title'],
                     'subtitle' => 'Current approvals and validity.',
                     'fields' => [
-                        ['approvals_name',       $getFieldLabel(4, 0, 'Approval Body Name')],
-                        ['approvals_scope',      $getFieldLabel(4, 1, 'Scope')],
-                        ['approvals_start_date', $getFieldLabel(4, 2, 'Start Date')],
-                        ['approvals_end_date',   $getFieldLabel(4, 3, 'Expiry Date')],
+                        ['approvals_name',       $getFieldLabel($otherApprovalsIndex, 0, 'Approval Body Name')],
+                        ['approvals_scope',      $getFieldLabel($otherApprovalsIndex, 1, 'Scope')],
+                        ['approvals_start_date', $getFieldLabel($otherApprovalsIndex, 2, 'Start Date')],
+                        ['approvals_end_date',   $getFieldLabel($otherApprovalsIndex, 3, 'Expiry Date')],
                     ],
                     'route' => 'application.saveOtherApprovals',
                 ],
