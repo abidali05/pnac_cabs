@@ -356,12 +356,12 @@
                         <div class="col-md-4"><label
                                 class="form-label">{{ $getLabel('Basic Application Information', 'scheme_name', 'Scheme Name') }}
                                 <span class="text-danger">*</span></label><input class="form-control" name="scheme_name"
-                                value="{{ old('scheme_name', $cbApplication->scheme_name) }}" required></div>
+                                value="{{ old('scheme_name', $cbApplication->scheme_name) }}" readonly></div>
                         <div class="col-md-4"><label
                                 class="form-label">{{ $getLabel('Basic Application Information', 'application_type', 'Application Type') }}
                                 <span class="text-danger">*</span></label><input class="form-control"
                                 name="application_type"
-                                value="{{ old('application_type', $cbApplication->application_type) }}" required></div>
+                                value="{{ old('application_type', $cbApplication->application_type) }}" readonly></div>
                         <div class="col-md-4"><label
                                 class="form-label">{{ $getLabel('Basic Application Information', 'application_no', 'Application Number') }}
                                 <span class="text-danger">*</span></label><input class="form-control"
@@ -385,7 +385,8 @@
                         <!-- Basic Information Fields -->
                         <div class="col-md-6">
                             <label class="form-label">CAB Name <span class="text-danger">*</span></label>
-                            <input class="form-control" name="cab_name" value="{{ old('cab_name', $general->cab_name ?? '') }}" required>
+                            <input class="form-control" name="cab_name"
+                                value="{{ old('cab_name', $general->cab_name ?? '') }}" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Address <span class="text-danger">*</span></label>
@@ -393,23 +394,28 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Postcode</label>
-                            <input class="form-control" name="postcode" value="{{ old('postcode', $general->postal_code ?? '') }}">
+                            <input class="form-control" name="postcode"
+                                value="{{ old('postcode', $general->postal_code ?? '') }}">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Telephone</label>
-                            <input class="form-control" name="telephone" value="{{ old('telephone', $general->telephone ?? '') }}">
+                            <input class="form-control" name="telephone"
+                                value="{{ old('telephone', $general->telephone ?? '') }}">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Email <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control" name="email" value="{{ old('email', $general->email ?? '') }}" required>
+                            <input type="email" class="form-control" name="email"
+                                value="{{ old('email', $general->email ?? '') }}" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">NTN/FTN</label>
-                            <input class="form-control" name="ntn_ftn" value="{{ old('ntn_ftn', $general->ntn_ftn ?? '') }}">
+                            <input class="form-control" name="ntn_ftn"
+                                value="{{ old('ntn_ftn', $general->ntn_ftn ?? '') }}">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Website</label>
-                            <input type="url" class="form-control" name="website" value="{{ old('website', $general->website ?? '') }}">
+                            <input type="url" class="form-control" name="website"
+                                value="{{ old('website', $general->website ?? '') }}">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">City</label>
@@ -417,7 +423,8 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Country</label>
-                            <input class="form-control" name="country" value="{{ old('country', $general->country ?? '') }}">
+                            <input class="form-control" name="country"
+                                value="{{ old('country', $general->country ?? '') }}">
                         </div>
                     </div>
                     <div class="d-flex justify-content-end mt-3">
@@ -496,7 +503,8 @@
                         <div class="col-md-4"><label
                                 class="form-label">{{ $getLabel('About Yourselves', 'position', 'Position') }} <span
                                     class="text-danger">*</span></label><input class="form-control"
-                                name="authorized_person[position]" value="{{ $authorized->position ?? '' }}" required>
+                                name="authorized_person[position]" value="{{ $authorized->position ?? '' }}"
+                                required>
                         </div>
                         @foreach (['parent_organization' => 'Parent Organization', 'relationship' => 'Relationship', 'postcode' => 'Postcode', 'telephone' => 'Telephone', 'fax' => 'Fax'] as $field => $fallbackLabel)
                             <div class="col-md-4"><label
@@ -512,8 +520,9 @@
                         </div>
                         <div class="col-md-4"><label
                                 class="form-label">{{ $getLabel('About Yourselves', 'ownership', 'Ownership') }} <span
-                                    class="text-danger">*</span></label><select class="form-control cb-ownership-select"
-                                name="parent_organization[ownership_type]" required>
+                                    class="text-danger">*</span></label><select
+                                class="form-control cb-ownership-select" name="parent_organization[ownership_type]"
+                                required>
                                 <option value="">Select</option>
                                 @foreach (['Individual', 'Public Limited Company', 'Private Company', 'Partnership', 'Learned Institution', 'Academic Institution', 'Public Body', 'Other'] as $type)
                                     <option value="{{ $type }}" @selected(($parent->ownership_type ?? '') === $type)>

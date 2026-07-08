@@ -8,6 +8,7 @@ use App\Http\Controllers\CertificationBodies\InspectionBodyController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\HalalCertification\HalalCertificationBodyController;
 use App\Models\ApplicationForLab;
+use App\Models\ApplicationForm;
 use App\Models\CalibrationScope;
 use App\Models\Category22000;
 use App\Models\CbApplication;
@@ -34,9 +35,7 @@ use App\Models\MlabApplication;
 use App\Models\PersonnelCertification;
 use App\Models\PersonnelScope;
 use App\Models\ProductScope;
-use App\Models\ProductCertificationScope;
 use App\Models\ProficiencyScope;
-use App\Models\PtpScope;
 use App\Models\ProficiencyTesting;
 use App\Models\Scheme;
 use App\Models\SubCategory22000;
@@ -49,7 +48,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 class ApplicationController extends Controller
 {
@@ -243,7 +241,7 @@ class ApplicationController extends Controller
         $countries = DB::table('countries')->pluck('en_short_name');
 
         $scheme_name = $request->scheme_name;
-        $form = \App\Models\ApplicationForm::where('application_name', $scheme_name)
+        $form = ApplicationForm::where('application_name', $scheme_name)
             ->orWhere('slug', \Str::slug($scheme_name))
             ->first();
         $application = $request->application;
@@ -355,7 +353,7 @@ class ApplicationController extends Controller
             if ($mlabApplication->certification_general_id) {
                 $general = CertificationGeneral::find($mlabApplication->certification_general_id);
             }
-            if (!$general) {
+            if (! $general) {
                 $general = CertificationGeneral::where('user_id', auth()->id())
                     ->where('category', 'Medical Laboratories')
                     ->where('application', $mlabApplication->application_type ?: 'New Application')
@@ -464,7 +462,7 @@ class ApplicationController extends Controller
     {
         // dd($request);
         $scheme_name = $request->query('scheme_name');
-        $form = \App\Models\ApplicationForm::where('application_name', $scheme_name)
+        $form = ApplicationForm::where('application_name', $scheme_name)
             ->orWhere('slug', \Str::slug($scheme_name))
             ->first();
 
@@ -1138,27 +1136,42 @@ class ApplicationController extends Controller
         ]);
 
         $application->update([
-            'scheme_name' => $data['scheme_name'],
+            'scheme' => $data['scheme_name'],
             'application_type' => $data['application_type'],
-            'status' => 'Draft'
+            'status' => 'Draft',
         ]);
 
         if ($application->certification_general_id) {
-            $general = \App\Models\CertificationGeneral::find($application->certification_general_id);
-            if ($general) {
-                $general->update([
-                    'cab_name' => $data['cab_name'],
-                    'address' => $data['address'],
-                    'telephone' => $data['telephone'] ?? '',
-                    'email' => $data['email'],
-                    'ntn_ftn' => $data['ntn_ftn'] ?? '',
-                    'website' => $data['website'] ?? '',
-                    'city' => $data['city'] ?? '',
-                    'country' => $data['country'] ?? '',
-                    'postal_code' => $data['postcode'] ?? '',
-                ]);
-            }
+            $general = CertificationGeneral::find($application->certification_general_id);
         }
+
+        if (! isset($general) || ! $general) {
+            $general = new CertificationGeneral;
+        }
+
+        $general->fill([
+            'scheme' => $data['scheme_name'],
+            'cab_name' => $data['cab_name'],
+            'address' => $data['address'],
+            'telephone' => $data['telephone'] ?? '',
+            'email' => $data['email'],
+            'ntn_ftn' => $data['ntn_ftn'] ?? '',
+            'website' => $data['website'] ?? '',
+            'city' => $data['city'] ?? '',
+            'country' => $data['country'] ?? '',
+            'postal_code' => $data['postcode'] ?? '',
+            'application' => 'New Application',
+            'user_id' => auth()->id(),
+            'category' => 'Certification Bodies',
+        ]);
+        $general->save();
+
+        $application->update([
+            'scheme' => $data['scheme_name'],
+            'application_type' => $data['application_type'],
+            'status' => 'Draft',
+            'certification_general_id' => $general->id,
+        ]);
 
         return $this->cbSectionResponse($request, 'Basic application information saved.', 'basic_info');
     }
@@ -1499,7 +1512,7 @@ class ApplicationController extends Controller
                     break;
                 }
             }
-            if (!$hasContent) {
+            if (! $hasContent) {
                 continue;
             }
 
@@ -1583,7 +1596,7 @@ class ApplicationController extends Controller
         ]);
 
         $general = CertificationGeneral::firstOrNew([
-            'id' => $mlabApplication->certification_general_id
+            'id' => $mlabApplication->certification_general_id,
         ]);
         $general->fill([
             'user_id' => auth()->id(),
@@ -1712,7 +1725,53 @@ class ApplicationController extends Controller
                     break;
                 }
             }
-            if (!$hasContent) {
+            if (! $hasContent) {
+
+                $general = null;
+                if (session('application_id')) {
+                    $general = CertificationGeneral::where('id', session('application_id'))
+                        ->where('user_id', auth()->id())
+                        ->first();
+                }
+                if (! $general) {
+                    $general = CertificationGeneral::where('user_id', auth()->id())
+                        ->where('category', 'Certification Bodies')
+                        ->where('application', $application->application_type)
+                        ->latest('id')
+                        ->first();
+                }
+                if ($general) {
+                    $general->update([
+                        'cab_name' => $data['cab_name'],
+                        'address' => $data['address'],
+                        'telephone' => $data['telephone'] ?? '',
+                        'email' => $data['email'],
+                        'ntn_ftn' => $data['ntn_ftn'] ?? '',
+                        'website' => $data['website'] ?? '',
+                        'city' => $data['city'] ?? '',
+                        'country' => $data['country'] ?? '',
+                        'postal_code' => $data['postcode'] ?? '',
+                    ]);
+                } else {
+                    $general = CertificationGeneral::create([
+                        'user_id' => auth()->id(),
+                        'category' => 'Certification Bodies',
+                        'application' => $application->application_type,
+                        'scheme' => 'Certification Bodies',
+                        'cab_name' => $data['cab_name'],
+                        'address' => $data['address'],
+                        'telephone' => $data['telephone'] ?? '',
+                        'email' => $data['email'],
+                        'ntn_ftn' => $data['ntn_ftn'] ?? '',
+                        'website' => $data['website'] ?? '',
+                        'city' => $data['city'] ?? '',
+                        'country' => $data['country'] ?? '',
+                        'postal_code' => $data['postcode'] ?? '',
+                        'reference_no' => 'CAB-'.now()->format('Ymd').rand(1000, 9999),
+                    ]);
+                }
+                session(['application_id' => $general->id]);
+
                 continue;
             }
 
