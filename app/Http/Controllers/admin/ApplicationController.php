@@ -324,7 +324,17 @@ class ApplicationController extends Controller
                 ]
             );
 
+            if ($general && !$cbApplication->certification_general_id) {
+                $cbApplication->update(['certification_general_id' => $general->id]);
+            }
+
             $cbData = $this->loadCbApplicationData($cbApplication);
+
+            // Reload $general from CbApplication's linked CertificationGeneral so view mode
+            // shows the saved CAB name / address / contact fields correctly.
+            if ($cbApplication->certification_general_id) {
+                $general = CertificationGeneral::find($cbApplication->certification_general_id) ?? $general;
+            }
         }
         if ($scheme_name === 'Halal Certification Bodies') {
             return app(HalalCertificationBodyController::class)->create($request);
@@ -441,7 +451,7 @@ class ApplicationController extends Controller
         }
 
         $savedSections = [
-            'basic_info' => ! empty($application->application_no),
+            'basic_info' => ! empty($application->certification_general_id) || ! empty($application->application_no),
             'body_info' => ! empty(optional($data['contact'])->certification_body_name),
             'accreditation_request' => $data['requested_scopes']->isNotEmpty(),
             'documents' => $data['documents']->isNotEmpty(),
@@ -1141,11 +1151,24 @@ class ApplicationController extends Controller
             'status' => 'Draft',
         ]);
 
+        // Try to find existing CertificationGeneral: first from the CbApplication link,
+        // then from session, then from an existing draft record for this user.
+        $general = null;
         if ($application->certification_general_id) {
             $general = CertificationGeneral::find($application->certification_general_id);
         }
-
-        if (! isset($general) || ! $general) {
+        if (! $general && session('application_id')) {
+            $general = CertificationGeneral::where('id', session('application_id'))
+                ->where('user_id', auth()->id())
+                ->first();
+        }
+        if (! $general) {
+            $general = CertificationGeneral::where('user_id', auth()->id())
+                ->where('category', 'Certification Bodies')
+                ->latest('id')
+                ->first();
+        }
+        if (! $general) {
             $general = new CertificationGeneral;
         }
 
@@ -1160,11 +1183,14 @@ class ApplicationController extends Controller
             'city' => $data['city'] ?? '',
             'country' => $data['country'] ?? '',
             'postal_code' => $data['postcode'] ?? '',
-            'application' => 'New Application',
+            'application' => $data['application_type'],
             'user_id' => auth()->id(),
             'category' => 'Certification Bodies',
         ]);
         $general->save();
+
+        // Keep session in sync with the correct general record.
+        session(['application_id' => $general->id]);
 
         $application->update([
             'scheme' => $data['scheme_name'],

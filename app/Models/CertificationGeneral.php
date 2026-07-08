@@ -37,7 +37,7 @@ class CertificationGeneral extends Model
 
     public function certificationBodyApplication()
     {
-        return $this->hasOne(CertificationBodyApplication::class, 'certification_general_id');
+        return $this->hasOne(CbApplication::class, 'certification_general_id');
     }
 
     public function certificationBodyStaff()
