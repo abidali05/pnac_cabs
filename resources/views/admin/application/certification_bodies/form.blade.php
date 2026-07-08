@@ -381,6 +381,44 @@
                                 class="form-label">{{ $getLabel('Basic Application Information', 'created_date', 'Created Date') }}
                                 <span class="text-danger">*</span></label><input class="form-control"
                                 value="{{ optional($cbApplication->created_at)->format('Y-m-d') }}" readonly></div>
+
+                        <!-- Basic Information Fields -->
+                        <div class="col-md-6">
+                            <label class="form-label">CAB Name <span class="text-danger">*</span></label>
+                            <input class="form-control" name="cab_name" value="{{ old('cab_name', $general->cab_name ?? '') }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Address <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="address" rows="2" required>{{ old('address', $general->address ?? '') }}</textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Postcode</label>
+                            <input class="form-control" name="postcode" value="{{ old('postcode', $general->postal_code ?? '') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Telephone</label>
+                            <input class="form-control" name="telephone" value="{{ old('telephone', $general->telephone ?? '') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" name="email" value="{{ old('email', $general->email ?? '') }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">NTN/FTN</label>
+                            <input class="form-control" name="ntn_ftn" value="{{ old('ntn_ftn', $general->ntn_ftn ?? '') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Website</label>
+                            <input type="url" class="form-control" name="website" value="{{ old('website', $general->website ?? '') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">City</label>
+                            <input class="form-control" name="city" value="{{ old('city', $general->city ?? '') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Country</label>
+                            <input class="form-control" name="country" value="{{ old('country', $general->country ?? '') }}">
+                        </div>
                     </div>
                     <div class="d-flex justify-content-end mt-3">
                         <button class="btn btn-success btn-sm" type="submit">Save Draft</button>
@@ -410,6 +448,15 @@
                         $getLabel('Basic Application Information', 'created_date', 'Created Date') => optional(
                             $cbApplication->created_at,
                         )->format('Y-m-d'),
+                        'CAB Name' => $general->cab_name ?? '-',
+                        'Address' => $general->address ?? '-',
+                        'Postcode' => $general->postal_code ?? '-',
+                        'Telephone' => $general->telephone ?? '-',
+                        'Email' => $general->email ?? '-',
+                        'NTN/FTN' => $general->ntn_ftn ?? '-',
+                        'Website' => $general->website ?? '-',
+                        'City' => $general->city ?? '-',
+                        'Country' => $general->country ?? '-',
                     ]);
                 @endphp
                 <div class="d-flex justify-content-end mt-3"><a href="{{ $editUrl('basic_info') }}"

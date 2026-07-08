@@ -18,6 +18,7 @@ class MlabApplication extends Model
         'status',
         'created_by',
         'submitted_at',
+        'certification_general_id',
     ];
 
     protected $casts = [
@@ -27,5 +28,10 @@ class MlabApplication extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function certificationGeneral(): BelongsTo
+    {
+        return $this->belongsTo(CertificationGeneral::class, 'certification_general_id');
     }
 }

@@ -15,6 +15,73 @@
             <textarea class="form-control" name="address" rows="2" required>{{ old('address', $org->address ?? '') }}</textarea>
         </div>
 
+        <div class="col-md-4">
+            <label class="form-label">Postcode</label>
+            <input class="form-control" name="postcode" value="{{ old('postcode', $org->postcode ?? '') }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Telephone</label>
+            <input class="form-control" name="telephone" value="{{ old('telephone', $org->telephone ?? '') }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Fax</label>
+            <input class="form-control" name="fax" value="{{ old('fax', $org->fax ?? '') }}">
+        </div>
+
+        {{-- Contact Person --}}
+        <div class="col-12 mt-2">
+            <h6 class="fw-bold">Contact Person</h6>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Contact Name <span class="text-danger">*</span></label>
+            <input class="form-control" name="contact_name" value="{{ old('contact_name', $org->contact_name ?? '') }}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Designation</label>
+            <input class="form-control" name="designation" value="{{ old('designation', $org->designation ?? '') }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Contact Email</label>
+            <input type="email" class="form-control" name="contact_email" value="{{ old('contact_email', $org->contact_email ?? '') }}">
+        </div>
+        <div class="col-md-12">
+            <label class="form-label">Contact Address</label>
+            <textarea class="form-control" name="contact_address" rows="2">{{ old('contact_address', $org->contact_address ?? '') }}</textarea>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Contact Postcode</label>
+            <input class="form-control" name="contact_postcode" value="{{ old('contact_postcode', $org->contact_postcode ?? '') }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Contact Tel</label>
+            <input class="form-control" name="contact_tel" value="{{ old('contact_tel', $org->contact_tel ?? '') }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Contact Fax</label>
+            <input class="form-control" name="contact_fax" value="{{ old('contact_fax', $org->contact_fax ?? '') }}">
+        </div>
+
+        {{-- General Fields --}}
+        <div class="col-12 mt-2">
+            <h6 class="fw-bold">General Business Information</h6>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">NTN/FTN</label>
+            <input class="form-control" name="ntn_ftn" value="{{ old('ntn_ftn', $general->ntn_ftn ?? '') }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Website</label>
+            <input type="url" class="form-control" name="website" value="{{ old('website', $general->website ?? '') }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">City</label>
+            <input class="form-control" name="city" value="{{ old('city', $general->city ?? '') }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Country</label>
+            <input class="form-control" name="country" value="{{ old('country', $general->country ?? '') }}">
+        </div>
+
         {{-- Parent Organization --}}
         <div class="col-12 mt-3">
             <h6 class="fw-bold">{{ $getSection('Parent Organization (if any)') ? $getSection('Parent Organization (if any)')['title'] : 'Parent Organization (if any)' }}</h6>

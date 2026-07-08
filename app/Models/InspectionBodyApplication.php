@@ -16,6 +16,7 @@ class InspectionBodyApplication extends Model
         'status',
         'created_by',
         'submitted_at',
+        'certification_general_id',
     ];
 
     protected $casts = ['submitted_at' => 'datetime'];
@@ -58,5 +59,10 @@ class InspectionBodyApplication extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(InspectionBodyDocument::class, 'application_id');
+    }
+
+    public function certificationGeneral(): BelongsTo
+    {
+        return $this->belongsTo(CertificationGeneral::class, 'certification_general_id');
     }
 }

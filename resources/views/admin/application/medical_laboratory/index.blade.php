@@ -534,6 +534,35 @@
                                     <textarea class="form-control" name="lab_address" rows="2" required>{{ old('lab_address', $mlabApplication->lab_address ?? '') }}</textarea>
                                 </div>
 
+                                <div class="col-md-4">
+                                    <label class="form-label">Postcode</label>
+                                    <input class="form-control" name="postcode" value="{{ old('postcode', $general->postal_code ?? '') }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Telephone</label>
+                                    <input class="form-control" name="tel" value="{{ old('tel', $general->telephone ?? '') }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Fax</label>
+                                    <input class="form-control" name="fax" value="{{ old('fax', $general->fax ?? '') }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">NTN/FTN</label>
+                                    <input class="form-control" name="ntn_ftn" value="{{ old('ntn_ftn', $general->ntn_ftn ?? '') }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Website</label>
+                                    <input type="url" class="form-control" name="website" value="{{ old('website', $general->website ?? '') }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">City</label>
+                                    <input class="form-control" name="city" value="{{ old('city', $general->city ?? '') }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Country</label>
+                                    <input class="form-control" name="country" value="{{ old('country', $general->country ?? '') }}">
+                                </div>
+
                                 {{-- 1.1 Name and position of authorising person --}}
                                 <div class="col-12">
                                     <h6 class="fw-bold">1.1 Name and position (Director level) of person authorising this
@@ -768,6 +797,13 @@
                                     [
                                         $getLabel('About Yourselves', 'organisation_name', 'Organisation Name') => $mlabApplication->organisation_name ?? '-',
                                         $getLabel('About Yourselves', 'lab_address', 'Laboratory Address') => $mlabApplication->lab_address ?? '-',
+                                        'Postcode' => $general->postal_code ?? '-',
+                                        'Telephone' => $general->telephone ?? '-',
+                                        'Fax' => $general->fax ?? '-',
+                                        'NTN/FTN' => $general->ntn_ftn ?? '-',
+                                        'Website' => $general->website ?? '-',
+                                        'City' => $general->city ?? '-',
+                                        'Country' => $general->country ?? '-',
                                     ],
                                     [
                                         $getLabel('About Yourselves', 'title', 'Title') => $step1->title ?? '-',

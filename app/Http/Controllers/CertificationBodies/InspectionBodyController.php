@@ -23,9 +23,24 @@ class InspectionBodyController extends Controller
             ['application_no' => null]
         );
 
+        $general = null;
+        if ($application->certification_general_id) {
+            $general = \App\Models\CertificationGeneral::find($application->certification_general_id);
+        }
+        if (!$general) {
+            $general = \App\Models\CertificationGeneral::where('user_id', auth()->id())
+                ->where('category', 'Inspection Bodies')
+                ->where('application', $application->application_type)
+                ->latest('id')
+                ->first();
+            if ($general) {
+                $application->update(['certification_general_id' => $general->id]);
+            }
+        }
+
         $data = $this->loadData($application);
 
-        return view('application.certification_bodies.inspection_body.index', compact('application', 'data'));
+        return view('application.certification_bodies.inspection_body.index', compact('application', 'data', 'general'));
     }
 
     public function saveStep1(Request $request, InspectionBodyApplication $application)
@@ -35,19 +50,17 @@ class InspectionBodyController extends Controller
         $data = $request->validate([
             'inspection_body_name' => 'required|string|max:255',
             'address' => 'required|string',
-            // 'postcode'                 => 'nullable|string|max:50',
-            // 'telephone'                => 'nullable|string|max:100',
-            // 'fax'                      => 'nullable|string|max:100',
-            // 'contact_name'             => 'required|string|max:255',
-            // 'designation'              => 'nullable|string|max:255',
-            // 'contact_address'          => 'nullable|string',
-            // 'contact_postcode'         => 'nullable|string|max:50',
-            // 'contact_tel'              => 'nullable|string|max:100',
-            // 'contact_fax'              => 'nullable|string|max:100',
-            // 'contact_email'            => 'nullable|email|max:255',
-            // 'office_details'           => 'nullable|string',
-            // 'new_accreditation'        => 'nullable|in:1',
-            // 'extension_scope'          => 'nullable|in:1',
+            'postcode' => 'nullable|string|max:50',
+            'telephone' => 'nullable|string|max:100',
+            'fax' => 'nullable|string|max:100',
+            'contact_name' => 'required|string|max:255',
+            'designation' => 'nullable|string|max:255',
+            'contact_address' => 'nullable|string',
+            'contact_postcode' => 'nullable|string|max:50',
+            'contact_tel' => 'nullable|string|max:100',
+            'contact_fax' => 'nullable|string|max:100',
+            'contact_email' => 'nullable|email|max:255',
+            'office_details' => 'nullable|string',
             'parent_organization' => 'nullable|string|max:255',
             'relationship' => 'nullable|string|max:255',
             'parent_address' => 'nullable|string',
@@ -73,11 +86,44 @@ class InspectionBodyController extends Controller
             'consultant_tel' => 'nullable|string|max:100',
             'consultant_fax' => 'nullable|string|max:100',
             'consultant_email' => 'nullable|email|max:255',
+            'ntn_ftn' => 'nullable|string|max:100',
+            'website' => 'nullable|url|max:255',
+            'city' => 'nullable|string|max:255',
+            'country' => 'nullable|string|max:255',
         ]);
+
+        $general = \App\Models\CertificationGeneral::firstOrNew([
+            'id' => $application->certification_general_id
+        ]);
+        $general->fill([
+            'user_id' => auth()->id(),
+            'category' => 'Inspection Bodies',
+            'application' => $application->application_type,
+            'scheme' => $data['inspection_body_name'],
+            'cab_name' => $data['inspection_body_name'],
+            'address' => $data['address'],
+            'telephone' => $data['telephone'] ?? '',
+            'email' => $data['contact_email'] ?? '',
+            'ntn_ftn' => $data['ntn_ftn'] ?? '',
+            'website' => $data['website'] ?? '',
+            'city' => $data['city'] ?? '',
+            'country' => $data['country'] ?? '',
+            'postal_code' => $data['postcode'] ?? '',
+        ]);
+        if (empty($general->reference_no)) {
+            $general->reference_no = 'IB-'.now()->format('Ymd').rand(1000, 9999);
+        }
+        $general->save();
+
+        $application->update([
+            'certification_general_id' => $general->id,
+        ]);
+
+        $orgData = \Illuminate\Support\Arr::except($data, ['ntn_ftn', 'website', 'city', 'country']);
 
         DB::table('inspection_body_organizations')->updateOrInsert(
             ['application_id' => $application->id],
-            $this->timestamps(array_merge($data, [
+            $this->timestamps(array_merge($orgData, [
                 'new_accreditation' => $request->has('new_accreditation') ? 1 : 0,
                 'extension_scope' => $request->has('extension_scope') ? 1 : 0,
             ]))

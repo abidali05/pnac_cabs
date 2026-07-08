@@ -23,9 +23,24 @@ class HalalCertificationBodyController extends Controller
             ['application_no' => null]
         );
 
+        $general = null;
+        if ($application->certification_general_id) {
+            $general = \App\Models\CertificationGeneral::find($application->certification_general_id);
+        }
+        if (!$general) {
+            $general = \App\Models\CertificationGeneral::where('user_id', auth()->id())
+                ->where('category', 'Halal Certification Bodies')
+                ->where('application', $application->application_type)
+                ->latest('id')
+                ->first();
+            if ($general) {
+                $application->update(['certification_general_id' => $general->id]);
+            }
+        }
+
         $data = $this->loadData($application);
 
-        return view('admin.application.halal_certification_bodies.index', compact('application', 'data'));
+        return view('admin.application.halal_certification_bodies.index', compact('application', 'data', 'general'));
     }
 
     // ── Step 1: Basic Information ─────────────────────────────────────────────
@@ -49,9 +64,39 @@ class HalalCertificationBodyController extends Controller
             'contact_email' => 'nullable|email|max:255',
             'halal_scope' => 'nullable|string',
             'sub_offices' => 'nullable|array',
+            'ntn_ftn' => 'nullable|string|max:100',
+            'website' => 'nullable|url|max:255',
+            'city' => 'nullable|string|max:255',
+            'country' => 'nullable|string|max:255',
         ]);
 
-        $application->update(['organization_name' => $data['organization_name']]);
+        $general = \App\Models\CertificationGeneral::firstOrNew([
+            'id' => $application->certification_general_id
+        ]);
+        $general->fill([
+            'user_id' => auth()->id(),
+            'category' => 'Halal Certification Bodies',
+            'application' => $application->application_type,
+            'scheme' => $data['organization_name'],
+            'cab_name' => $data['organization_name'],
+            'address' => $data['address'],
+            'telephone' => $data['telephone'] ?? '',
+            'email' => $data['contact_email'] ?? '',
+            'ntn_ftn' => $data['ntn_ftn'] ?? '',
+            'website' => $data['website'] ?? '',
+            'city' => $data['city'] ?? '',
+            'country' => $data['country'] ?? '',
+            'postal_code' => $data['postcode'] ?? '',
+        ]);
+        if (empty($general->reference_no)) {
+            $general->reference_no = 'HCB-'.now()->format('Ymd').rand(1000, 9999);
+        }
+        $general->save();
+
+        $application->update([
+            'organization_name' => $data['organization_name'],
+            'certification_general_id' => $general->id,
+        ]);
 
         DB::table('hcb_basic_information')->updateOrInsert(
             ['application_id' => $application->id],
