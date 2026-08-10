@@ -83,6 +83,26 @@
                 value="{{ old('contact_fax', $basicInfo->contact_fax ?? '') }}">
         </div>
 
+        <div class="col-md-3">
+            <label class="form-label">NTN/FTN</label>
+            <input class="form-control" name="ntn_ftn" value="{{ old('ntn_ftn', $general->ntn_ftn ?? '') }}">
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Website</label>
+            <input type="url" class="form-control" name="website" value="{{ old('website', $general->website ?? '') }}">
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">City</label>
+            <input class="form-control" name="city" value="{{ old('city', $general->city ?? '') }}">
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Country</label>
+            <input class="form-control" name="country" value="{{ old('country', $general->country ?? '') }}">
+        </div>
+
     </div>
 
     <div class="d-flex justify-content-end mt-3">

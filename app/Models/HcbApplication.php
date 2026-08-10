@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class HcbApplication extends Model
 {
     protected $table = 'hcb_applications';
-    protected $fillable = ['application_no','scheme_name','application_type','organization_name','status','current_step','submitted_at','created_by'];
+    protected $fillable = ['application_no','scheme_name','application_type','organization_name','status','current_step','submitted_at','created_by','certification_general_id'];
     protected $casts = ['submitted_at' => 'datetime'];
 
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
@@ -27,4 +27,6 @@ class HcbApplication extends Model
     public function otherApprovals(): HasMany { return $this->hasMany(HcbOtherApproval::class, 'application_id'); }
     public function declaration(): HasOne { return $this->hasOne(HcbDeclaration::class, 'application_id'); }
     public function documents(): HasMany { return $this->hasMany(HcbDocument::class, 'application_id'); }
+
+    public function certificationGeneral(): BelongsTo { return $this->belongsTo(CertificationGeneral::class, 'certification_general_id'); }
 }

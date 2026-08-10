@@ -8,6 +8,7 @@ use App\Http\Controllers\CertificationBodies\InspectionBodyController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\HalalCertification\HalalCertificationBodyController;
 use App\Models\ApplicationForLab;
+use App\Models\ApplicationForm;
 use App\Models\CalibrationScope;
 use App\Models\Category22000;
 use App\Models\CbApplication;
@@ -34,9 +35,7 @@ use App\Models\MlabApplication;
 use App\Models\PersonnelCertification;
 use App\Models\PersonnelScope;
 use App\Models\ProductScope;
-use App\Models\ProductCertificationScope;
 use App\Models\ProficiencyScope;
-use App\Models\PtpScope;
 use App\Models\ProficiencyTesting;
 use App\Models\Scheme;
 use App\Models\SubCategory22000;
@@ -49,7 +48,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 class ApplicationController extends Controller
 {
@@ -243,7 +241,7 @@ class ApplicationController extends Controller
         $countries = DB::table('countries')->pluck('en_short_name');
 
         $scheme_name = $request->scheme_name;
-        $form = \App\Models\ApplicationForm::where('application_name', $scheme_name)
+        $form = ApplicationForm::where('application_name', $scheme_name)
             ->orWhere('slug', \Str::slug($scheme_name))
             ->first();
         $application = $request->application;
@@ -326,7 +324,17 @@ class ApplicationController extends Controller
                 ]
             );
 
+            if ($general && !$cbApplication->certification_general_id) {
+                $cbApplication->update(['certification_general_id' => $general->id]);
+            }
+
             $cbData = $this->loadCbApplicationData($cbApplication);
+
+            // Reload $general from CbApplication's linked CertificationGeneral so view mode
+            // shows the saved CAB name / address / contact fields correctly.
+            if ($cbApplication->certification_general_id) {
+                $general = CertificationGeneral::find($cbApplication->certification_general_id) ?? $general;
+            }
         }
         if ($scheme_name === 'Halal Certification Bodies') {
             return app(HalalCertificationBodyController::class)->create($request);
@@ -351,6 +359,21 @@ class ApplicationController extends Controller
                 ]
             );
 
+            $general = null;
+            if ($mlabApplication->certification_general_id) {
+                $general = CertificationGeneral::find($mlabApplication->certification_general_id);
+            }
+            if (! $general) {
+                $general = CertificationGeneral::where('user_id', auth()->id())
+                    ->where('category', 'Medical Laboratories')
+                    ->where('application', $mlabApplication->application_type ?: 'New Application')
+                    ->latest('id')
+                    ->first();
+                if ($general) {
+                    $mlabApplication->update(['certification_general_id' => $general->id]);
+                }
+            }
+
             // Load all related data
             $mlabData = $this->loadMedicalLaboratoryData($mlabApplication);
 
@@ -358,7 +381,8 @@ class ApplicationController extends Controller
                 'mlabApplication',
                 'mlabData',
                 'scheme_name',
-                'application'
+                'application',
+                'general'
             ));
         }
         $labApplication = ApplicationForLab::updateOrCreate(
@@ -427,7 +451,7 @@ class ApplicationController extends Controller
         }
 
         $savedSections = [
-            'basic_info' => ! empty($application->application_no),
+            'basic_info' => ! empty($application->certification_general_id) || ! empty($application->application_no),
             'body_info' => ! empty(optional($data['contact'])->certification_body_name),
             'accreditation_request' => $data['requested_scopes']->isNotEmpty(),
             'documents' => $data['documents']->isNotEmpty(),
@@ -448,7 +472,7 @@ class ApplicationController extends Controller
     {
         // dd($request);
         $scheme_name = $request->query('scheme_name');
-        $form = \App\Models\ApplicationForm::where('application_name', $scheme_name)
+        $form = ApplicationForm::where('application_name', $scheme_name)
             ->orWhere('slug', \Str::slug($scheme_name))
             ->first();
 
@@ -1110,11 +1134,70 @@ class ApplicationController extends Controller
             'scheme_name' => 'required|string|max:255',
             'application_type' => 'required|string|max:255',
             'application_no' => 'nullable|string|max:255',
-            // 'organization_name' => 'required|string|max:255',
-            // 'accreditation_type' => 'nullable|string|max:255',
+            'cab_name' => 'required|string|max:255',
+            'address' => 'required|string',
+            'postcode' => 'nullable|string|max:50',
+            'telephone' => 'nullable|string|max:100',
+            'email' => 'required|email|max:255',
+            'ntn_ftn' => 'nullable|string|max:100',
+            'website' => 'nullable|url|max:255',
+            'city' => 'nullable|string|max:255',
+            'country' => 'nullable|string|max:255',
         ]);
 
-        $application->update(array_merge($data, ['status' => 'Draft']));
+        $application->update([
+            'scheme' => $data['scheme_name'],
+            'application_type' => $data['application_type'],
+            'status' => 'Draft',
+        ]);
+
+        // Try to find existing CertificationGeneral: first from the CbApplication link,
+        // then from session, then from an existing draft record for this user.
+        $general = null;
+        if ($application->certification_general_id) {
+            $general = CertificationGeneral::find($application->certification_general_id);
+        }
+        if (! $general && session('application_id')) {
+            $general = CertificationGeneral::where('id', session('application_id'))
+                ->where('user_id', auth()->id())
+                ->first();
+        }
+        if (! $general) {
+            $general = CertificationGeneral::where('user_id', auth()->id())
+                ->where('category', 'Certification Bodies')
+                ->latest('id')
+                ->first();
+        }
+        if (! $general) {
+            $general = new CertificationGeneral;
+        }
+
+        $general->fill([
+            'scheme' => $data['scheme_name'],
+            'cab_name' => $data['cab_name'],
+            'address' => $data['address'],
+            'telephone' => $data['telephone'] ?? '',
+            'email' => $data['email'],
+            'ntn_ftn' => $data['ntn_ftn'] ?? '',
+            'website' => $data['website'] ?? '',
+            'city' => $data['city'] ?? '',
+            'country' => $data['country'] ?? '',
+            'postal_code' => $data['postcode'] ?? '',
+            'application' => $data['application_type'],
+            'user_id' => auth()->id(),
+            'category' => 'Certification Bodies',
+        ]);
+        $general->save();
+
+        // Keep session in sync with the correct general record.
+        session(['application_id' => $general->id]);
+
+        $application->update([
+            'scheme' => $data['scheme_name'],
+            'application_type' => $data['application_type'],
+            'status' => 'Draft',
+            'certification_general_id' => $general->id,
+        ]);
 
         return $this->cbSectionResponse($request, 'Basic application information saved.', 'basic_info');
     }
@@ -1455,7 +1538,7 @@ class ApplicationController extends Controller
                     break;
                 }
             }
-            if (!$hasContent) {
+            if (! $hasContent) {
                 continue;
             }
 
@@ -1490,7 +1573,7 @@ class ApplicationController extends Controller
         $data = $request->validate([
             'organisation_name' => 'required|string|max:255',
             'lab_address' => 'required|string',
-            // 'postcode' => 'nullable|string|max:100',
+            'postcode' => 'nullable|string|max:100',
             'tel' => 'nullable|string|max:100',
             'fax' => 'nullable|string|max:100',
             'title' => 'nullable|string|max:100',
@@ -1532,10 +1615,38 @@ class ApplicationController extends Controller
             'fields_of_testing.*' => 'string|max:100',
             'other_field' => 'nullable|string',
             'sample_collection_list' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+            'ntn_ftn' => 'nullable|string|max:100',
+            'website' => 'nullable|url|max:255',
+            'city' => 'nullable|string|max:255',
+            'country' => 'nullable|string|max:255',
         ]);
+
+        $general = CertificationGeneral::firstOrNew([
+            'id' => $mlabApplication->certification_general_id,
+        ]);
+        $general->fill([
+            'user_id' => auth()->id(),
+            'category' => 'Medical Laboratories',
+            'application' => $mlabApplication->application_type ?: 'New Application',
+            'scheme' => $data['organisation_name'],
+            'cab_name' => $data['organisation_name'],
+            'address' => $data['lab_address'],
+            'telephone' => $data['tel'] ?? '',
+            'email' => $data['contact_email'] ?? '',
+            'ntn_ftn' => $data['ntn_ftn'] ?? '',
+            'website' => $data['website'] ?? '',
+            'city' => $data['city'] ?? '',
+            'country' => $data['country'] ?? '',
+            'postal_code' => $data['postcode'] ?? '',
+        ]);
+        if (empty($general->reference_no)) {
+            $general->reference_no = 'MLAB-'.now()->format('Ymd').rand(1000, 9999);
+        }
+        $general->save();
 
         // Update master application
         $mlabApplication->update([
+            'certification_general_id' => $general->id,
             'organisation_name' => $data['organisation_name'],
             'lab_address' => $data['lab_address'],
         ]);
@@ -1552,11 +1663,6 @@ class ApplicationController extends Controller
         DB::table('mlab_step1_organisation')->updateOrInsert(
             ['mlab_application_id' => $mlabApplication->id],
             $this->timestamps([
-                // 'organisation_name' => $data['organisation_name'],
-                // 'lab_address' => $data['lab_address'],
-                // 'postcode' => $data['postcode'] ?? null,
-                // 'tel' => $data['tel'] ?? null,
-                // 'fax' => $data['fax'] ?? null,
                 'title' => $data['title'] ?? null,
                 'contact_name' => $data['contact_name'],
                 'contact_designation' => $data['contact_designation'] ?? null,
@@ -1645,7 +1751,53 @@ class ApplicationController extends Controller
                     break;
                 }
             }
-            if (!$hasContent) {
+            if (! $hasContent) {
+
+                $general = null;
+                if (session('application_id')) {
+                    $general = CertificationGeneral::where('id', session('application_id'))
+                        ->where('user_id', auth()->id())
+                        ->first();
+                }
+                if (! $general) {
+                    $general = CertificationGeneral::where('user_id', auth()->id())
+                        ->where('category', 'Certification Bodies')
+                        ->where('application', $application->application_type)
+                        ->latest('id')
+                        ->first();
+                }
+                if ($general) {
+                    $general->update([
+                        'cab_name' => $data['cab_name'],
+                        'address' => $data['address'],
+                        'telephone' => $data['telephone'] ?? '',
+                        'email' => $data['email'],
+                        'ntn_ftn' => $data['ntn_ftn'] ?? '',
+                        'website' => $data['website'] ?? '',
+                        'city' => $data['city'] ?? '',
+                        'country' => $data['country'] ?? '',
+                        'postal_code' => $data['postcode'] ?? '',
+                    ]);
+                } else {
+                    $general = CertificationGeneral::create([
+                        'user_id' => auth()->id(),
+                        'category' => 'Certification Bodies',
+                        'application' => $application->application_type,
+                        'scheme' => 'Certification Bodies',
+                        'cab_name' => $data['cab_name'],
+                        'address' => $data['address'],
+                        'telephone' => $data['telephone'] ?? '',
+                        'email' => $data['email'],
+                        'ntn_ftn' => $data['ntn_ftn'] ?? '',
+                        'website' => $data['website'] ?? '',
+                        'city' => $data['city'] ?? '',
+                        'country' => $data['country'] ?? '',
+                        'postal_code' => $data['postcode'] ?? '',
+                        'reference_no' => 'CAB-'.now()->format('Ymd').rand(1000, 9999),
+                    ]);
+                }
+                session(['application_id' => $general->id]);
+
                 continue;
             }
 

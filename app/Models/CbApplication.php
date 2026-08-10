@@ -21,11 +21,17 @@ class CbApplication extends Model
         'status',
         'submitted_at',
         'created_by',
+        'certification_general_id',
     ];
 
     protected $casts = [
         'submitted_at' => 'datetime',
     ];
+
+    public function certificationGeneral(): BelongsTo
+    {
+        return $this->belongsTo(CertificationGeneral::class, 'certification_general_id');
+    }
 
     public function creator(): BelongsTo
     {
