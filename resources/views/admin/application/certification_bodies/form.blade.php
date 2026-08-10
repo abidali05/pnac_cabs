@@ -968,8 +968,8 @@
                     </div>
                     <div class="d-flex justify-content-end gap-2 mt-3">
                         <button class="btn btn-success btn-sm">Save Draft</button>
-                        <button class="btn btn-primary btn-sm" name="final_submit" value="1">Final
-                            Submit</button>
+                        {{-- <button class="btn btn-primary btn-sm" name="final_submit" value="1">Final
+                            Submit</button> --}}
                     </div>
                 </form>
             @else

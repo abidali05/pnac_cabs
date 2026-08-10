@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\HalalCertification;
 
 use App\Http\Controllers\Controller;
+use App\Models\CertificationGeneral;
 use App\Models\HcbApplication;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,10 +26,10 @@ class HalalCertificationBodyController extends Controller
 
         $general = null;
         if ($application->certification_general_id) {
-            $general = \App\Models\CertificationGeneral::find($application->certification_general_id);
+            $general = CertificationGeneral::find($application->certification_general_id);
         }
-        if (!$general) {
-            $general = \App\Models\CertificationGeneral::where('user_id', auth()->id())
+        if (! $general) {
+            $general = CertificationGeneral::where('user_id', auth()->id())
                 ->where('category', 'Halal Certification Bodies')
                 ->where('application', $application->application_type)
                 ->latest('id')
@@ -70,8 +71,8 @@ class HalalCertificationBodyController extends Controller
             'country' => 'nullable|string|max:255',
         ]);
 
-        $general = \App\Models\CertificationGeneral::firstOrNew([
-            'id' => $application->certification_general_id
+        $general = CertificationGeneral::firstOrNew([
+            'id' => $application->certification_general_id,
         ]);
         $general->fill([
             'user_id' => auth()->id(),
@@ -116,6 +117,7 @@ class HalalCertificationBodyController extends Controller
                 'new_accreditation' => $request->boolean('new_accreditation'),
                 'extension_scope' => $request->boolean('extension_scope'),
                 'halal_scope' => $data['halal_scope'] ?? null,
+                'city' => $data['city'] ?? null,
             ])
         );
 

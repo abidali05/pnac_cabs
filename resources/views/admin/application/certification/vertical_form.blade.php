@@ -556,7 +556,7 @@
             ];
 
             if ($schemeName === 'Calibration') {
-                $orderedSections = array_values(array_diff($orderedSections, ['testing_scope']));
+                $orderedSections = array_values(array_diff($orderedSections, ['testing_scope', 'calibration_facility']));
             } elseif ($schemeName === 'Testing') {
                 $orderedSections = array_values(
                     array_diff($orderedSections, ['calibration_scope', 'calibration_facility']),
